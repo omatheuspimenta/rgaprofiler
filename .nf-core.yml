@@ -1,0 +1,54 @@
+repository_type: pipeline
+
+nf_core_version: 4.1.0
+
+lint:
+  files_unchanged:
+    - assets/sendmail_template.txt
+    - docs/CONTRIBUTING.md
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-rgaprofiler_logo_light.png
+    - docs/images/nf-core-rgaprofiler_logo_light.png
+    - docs/images/nf-core-rgaprofiler_logo_dark.png
+    - .github/ISSUE_TEMPLATE/bug_report.yml
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - assets/email_template.txt
+    - docs/README.md
+  nextflow_config:
+    - manifest.name
+    - manifest.homePage
+  multiqc_config: false
+  files_exist:
+    - assets/multiqc_config.yml
+    - conf/igenomes.config
+    - conf/igenomes_ignored.config
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-rgaprofiler_logo_light.png
+    - docs/images/nf-core-rgaprofiler_logo_light.png
+    - docs/images/nf-core-rgaprofiler_logo_dark.png
+    - .github/ISSUE_TEMPLATE/config.yml
+    - .github/workflows/awstest.yml
+    - .github/workflows/awsfulltest.yml
+
+template:
+  org: omatheuspimenta
+  name: rgaprofiler
+  description: rgarofiler is a Nextflow pipeline for the comprehensive identification,
+    annotation, and classification of Resistance Gene Analogs (RGAs) from protein
+    sequences. The workflow integrates multiple state-of-the-art prediction tools,
+    including DeepCoil2 (coiled-coil domains), DeepTMHMM (transmembrane helices),
+    InterProScan (protein domains and functional annotation), SignalP 6.0 (signal
+    peptides), DeepLoc (subcellular localization), and Phobius (signal peptides and
+    transmembrane topology). The resulting annotations are processed by custom Python
+    scripts to classify proteins into RGA classes based on their predicted structural
+    and functional features.
+  author: Pimenta-Zanon, M. H.
+  version: 1.0.0dev
+  force: true
+  outdir: .
+  skip_features:
+    - igenomes
+    - multiqc
+    - fastqc
+    - codespaces
+  is_nfcore: false
