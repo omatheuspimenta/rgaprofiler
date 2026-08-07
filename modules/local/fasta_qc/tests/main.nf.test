@@ -1,0 +1,51 @@
+nextflow_process {
+    name "Test Process FASTA_QC"
+    script "../main.nf"
+    process "FASTA_QC"
+
+    test("Need to cleanup duplicates, stars and replace invalide chars to X") {
+        when {
+            process {
+                """
+                def dirty_fasta = file("\${workDir}/dirty.fasta")
+                dirty_fasta.text = '''\\
+                >Seq1
+                MKV*LY
+                >Seq2
+                MKVLY
+                >Seq1 duplicada
+                MKVLY
+                >Seq3_invalida
+                MKV123LY
+                '''.stripIndent()
+
+                input[0] = [
+                    [ id:'teste_qc', single_end:false ],
+                    dirty_fasta
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+            
+            def out_fasta = process.out.fasta[0][1]
+            assert file(out_fasta).exists()
+            
+            def lines = file(out_fasta).readLines()
+            
+            // 1. Seq1. Star removed?
+            assert lines.contains(">Seq1")
+            assert lines.contains("MKVLY") 
+            
+            // 2. seqkit rmdup works?
+            assert !lines.contains(">Seq1 duplicada")
+            
+            // 3. Invalid chars replaced to X
+            assert lines.contains(">Seq3_invalida")
+            assert lines.contains("MKVXXXLY")
+            
+            assert snapshot(process.out).match()
+        }
+    }
+}

@@ -1,0 +1,37 @@
+{
+    "Need to cleanup duplicates, stars and replace invalide chars to X": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "teste_qc",
+                            "single_end": false
+                        },
+                        "teste_qc_clean.fasta:md5,b651ed5a59cdba0972c095a1904cc4f0"
+                    ]
+                ],
+                "1": [
+                    "versions.yml:md5,0efa55ca8cb8d065debfb68a97ac5d31"
+                ],
+                "fasta": [
+                    [
+                        {
+                            "id": "teste_qc",
+                            "single_end": false
+                        },
+                        "teste_qc_clean.fasta:md5,b651ed5a59cdba0972c095a1904cc4f0"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,0efa55ca8cb8d065debfb68a97ac5d31"
+                ]
+            }
+        ],
+        "timestamp": "2026-08-06T22:27:21.24824229",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}
