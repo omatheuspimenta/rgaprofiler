@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <input.fasta> <output.fasta>" >&2
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <input.fasta> <output.fasta> <chunk_size>" >&2
+    echo "  chunk_size: number of sequences per chunk (positive integer)" >&2
     exit 1
 fi
 
 INPUT=$1
 OUTPUT=$2
+CHUNK_SIZE=$3
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
+
+if ! [[ "$CHUNK_SIZE" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ERROR: chunk_size must be a positive integer, got '$CHUNK_SIZE'" >&2
+    exit 1
+fi
 
 VALID_AA="ACDEFGHIKLMNPQRSTVWYBXZJUO"
 
@@ -61,3 +68,23 @@ if [ ! -s "$OUTPUT" ]; then
     echo "ERROR: no valid sequences were written to $OUTPUT" >&2
     exit 1
 fi
+
+# 5. Split the cleaned FASTA into chunks of $CHUNK_SIZE sequences each, so
+#    downstream Nextflow processes can fan out over them. Chunks are written
+#    to a dedicated directory next to $OUTPUT, named after it, e.g.
+#    "results.fasta" -> "results_chunks/results.part_001.fasta"
+OUTBASE=$(basename "$OUTPUT")
+OUTDIR=$(dirname "$OUTPUT")
+CHUNK_PREFIX="${OUTBASE%.*}"
+CHUNK_DIR="$OUTDIR/${CHUNK_PREFIX}_chunks"
+
+rm -rf "$CHUNK_DIR"
+seqkit split2 -s "$CHUNK_SIZE" -O "$CHUNK_DIR" -o "$CHUNK_PREFIX" -e .fasta -w 0 "$OUTPUT"
+
+N_CHUNKS=$(find "$CHUNK_DIR" -maxdepth 1 -name '*.fasta' | wc -l)
+if [ "$N_CHUNKS" -eq 0 ]; then
+    echo "ERROR: chunking produced no files in $CHUNK_DIR" >&2
+    exit 1
+fi
+
+echo "Split $OUTPUT into $N_CHUNKS chunk(s) of up to $CHUNK_SIZE sequences in $CHUNK_DIR" >&2

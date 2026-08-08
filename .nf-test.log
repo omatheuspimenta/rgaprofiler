@@ -1,18 +1,18 @@
-Aug-06 22:27:13.188 [main] INFO  com.askimed.nf.test.App - nf-test 0.9.5
-Aug-06 22:27:13.201 [main] INFO  com.askimed.nf.test.App - Arguments: [test, modules/local/fasta_qc/tests/main.nf.test, --update-snapshot]
-Aug-06 22:27:14.296 [main] INFO  com.askimed.nf.test.App - Nextflow Version: 26.04.6
-Aug-06 22:27:14.298 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Load config from file /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nf-test.config...
-Aug-06 22:27:14.961 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Loaded 9 files from directory /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler in 0.029 sec
-Aug-06 22:27:14.962 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Found 1 files containing tests.
-Aug-06 22:27:14.962 [main] DEBUG com.askimed.nf.test.lang.dependencies.DependencyResolver - Found files: [/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test]
-Aug-06 22:27:15.167 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Found 1 tests to execute.
-Aug-06 22:27:15.168 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Started test plan
-Aug-06 22:27:15.168 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Running testsuite 'Test Process FASTA_QC' from file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test'.
-Aug-06 22:27:15.168 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Run test 'f79195d7: Need to cleanup duplicates, stars and replace invalide chars to X'. type: com.askimed.nf.test.lang.process.ProcessTest
-Aug-06 22:27:21.246 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Init new snapshot file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test.snap'
-Aug-06 22:27:21.247 [main] DEBUG com.askimed.nf.test.lang.extensions.Snapshot - Snapshot 'Need to cleanup duplicates, stars and replace invalide chars to X' not found.
-Aug-06 22:27:21.248 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Created snapshot 'Need to cleanup duplicates, stars and replace invalide chars to X'
-Aug-06 22:27:21.266 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Wrote snapshots to file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test.snap'
-Aug-06 22:27:21.267 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Test 'f79195d7: Need to cleanup duplicates, stars and replace invalide chars to X' finished. status: PASSED
-Aug-06 22:27:21.268 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Testsuite 'Test Process FASTA_QC' finished. snapshot file: true, skipped tests: false, failed tests: false
-Aug-06 22:27:21.271 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Executed 1 tests. 0 tests failed. Done!
+Aug-07 21:59:57.166 [main] INFO  com.askimed.nf.test.App - nf-test 0.9.5
+Aug-07 21:59:57.238 [main] INFO  com.askimed.nf.test.App - Arguments: [test, modules/local/fasta_qc/tests/main.nf.test, --update-snapshot]
+Aug-07 22:00:00.862 [main] INFO  com.askimed.nf.test.App - Nextflow Version: 26.04.6
+Aug-07 22:00:00.865 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Load config from file /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nf-test.config...
+Aug-07 22:00:02.354 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Loaded 9 files from directory /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler in 0.082 sec
+Aug-07 22:00:02.356 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Found 1 files containing tests.
+Aug-07 22:00:02.356 [main] DEBUG com.askimed.nf.test.lang.dependencies.DependencyResolver - Found files: [/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test]
+Aug-07 22:00:02.873 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Found 1 tests to execute.
+Aug-07 22:00:02.874 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Started test plan
+Aug-07 22:00:02.874 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Running testsuite 'Test Process FASTA_QC' from file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test'.
+Aug-07 22:00:02.874 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Run test '4c4d8dbd: Should remove duplicates, replace invalid characters with X, and split into chunks'. type: com.askimed.nf.test.lang.process.ProcessTest
+Aug-07 22:00:16.181 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Init new snapshot file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test.snap'
+Aug-07 22:00:16.182 [main] DEBUG com.askimed.nf.test.lang.extensions.Snapshot - Snapshot 'Should remove duplicates, replace invalid characters with X, and split into chunks' not found.
+Aug-07 22:00:16.182 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Created snapshot 'Should remove duplicates, replace invalid characters with X, and split into chunks'
+Aug-07 22:00:16.210 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Wrote snapshots to file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/fasta_qc/tests/main.nf.test.snap'
+Aug-07 22:00:16.210 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Test '4c4d8dbd: Should remove duplicates, replace invalid characters with X, and split into chunks' finished. status: PASSED
+Aug-07 22:00:16.212 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Testsuite 'Test Process FASTA_QC' finished. snapshot file: true, skipped tests: false, failed tests: false
+Aug-07 22:00:16.215 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Executed 1 tests. 0 tests failed. Done!

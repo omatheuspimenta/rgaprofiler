@@ -1,0 +1,2 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+1	cd/cdb60f	485632	FASTA_QC (teste_qc)	COMPLETED	0	2026-08-07 22:00:14.398	412ms	318ms	189.0%	3.4 MB	7.6 MB	429.8 KB	1.9 KB

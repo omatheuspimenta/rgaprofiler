@@ -1,5 +1,5 @@
 {
-    "Need to cleanup duplicates, stars and replace invalide chars to X": {
+    "Should remove duplicates, replace invalid characters with X, and split into chunks": {
         "content": [
             {
                 "0": [
@@ -8,11 +8,35 @@
                             "id": "teste_qc",
                             "single_end": false
                         },
-                        "teste_qc_clean.fasta:md5,b651ed5a59cdba0972c095a1904cc4f0"
+                        "teste_qc_clean.fasta:md5,0e867e0419156833a4ccb228b36fe88c"
                     ]
                 ],
                 "1": [
+                    [
+                        {
+                            "id": "teste_qc",
+                            "single_end": false
+                        },
+                        [
+                            "teste_qc_clean.part_001.fasta.fasta:md5,8b60dd48f29e6741fa0ce8e62e67e284",
+                            "teste_qc_clean.part_002.fasta.fasta:md5,e0801dbcea13a8732fcef55fa37f4eb6"
+                        ]
+                    ]
+                ],
+                "2": [
                     "versions.yml:md5,0efa55ca8cb8d065debfb68a97ac5d31"
+                ],
+                "chunks": [
+                    [
+                        {
+                            "id": "teste_qc",
+                            "single_end": false
+                        },
+                        [
+                            "teste_qc_clean.part_001.fasta.fasta:md5,8b60dd48f29e6741fa0ce8e62e67e284",
+                            "teste_qc_clean.part_002.fasta.fasta:md5,e0801dbcea13a8732fcef55fa37f4eb6"
+                        ]
+                    ]
                 ],
                 "fasta": [
                     [
@@ -20,7 +44,7 @@
                             "id": "teste_qc",
                             "single_end": false
                         },
-                        "teste_qc_clean.fasta:md5,b651ed5a59cdba0972c095a1904cc4f0"
+                        "teste_qc_clean.fasta:md5,0e867e0419156833a4ccb228b36fe88c"
                     ]
                 ],
                 "versions": [
@@ -28,7 +52,7 @@
                 ]
             }
         ],
-        "timestamp": "2026-08-06T22:27:21.24824229",
+        "timestamp": "2026-08-07T22:00:16.18277773",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

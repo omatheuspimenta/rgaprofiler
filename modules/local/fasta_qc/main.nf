@@ -10,15 +10,17 @@ process FASTA_QC {
 
     input:
     tuple val(meta), path(fasta)
+    val chunk_size
 
     output:
-    tuple val(meta), path("*_clean.fasta"), emit: fasta
-    path "versions.yml"                   , emit: versions
+    tuple val(meta), path("*_clean.fasta")      , emit: fasta
+    tuple val(meta), path("*_chunks/*.fasta")   , emit: chunks
+    path "versions.yml"                         , emit: versions
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    fasta_qc.sh ${fasta} ${prefix}_clean.fasta
+    fasta_qc.sh ${fasta} ${prefix}_clean.fasta ${chunk_size}
 
     # nf-core modules: Add version information to output
     cat <<-END_VERSIONS > versions.yml
