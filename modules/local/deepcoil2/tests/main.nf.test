@@ -1,0 +1,37 @@
+nextflow_process {
+    name "Test Process DEEPCOIL2"
+    script "../main.nf"
+    process "DEEPCOIL2"
+
+    test("Run deepcoil2 - input one chunk and run") {
+        when {
+            process {
+                """
+                // chunk mock from fasta_qc
+                def chunk_fasta = file("\${workDir}/chunk_1.fasta")
+                chunk_fasta.text = '''\\
+                >Seq1
+                MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHG
+                >Seq2
+                MKTLLLLSAVIGASACQGGVAAQNCYKQRCARRCGTRCGLCCQAQCAKACGCCCA
+                '''.stripIndent()
+
+                input[0] = [
+                    [ id:'teste_deepcoil', single_end:false ], // meta
+                    chunk_fasta
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+            
+            // check if the output folder exists
+            def results = process.out.predictions[0][1]
+            assert results.size() > 0
+            
+            // Check the version to ensure the complete run
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}
