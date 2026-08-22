@@ -1,18 +1,18 @@
-Aug-07 22:47:28.071 [main] INFO  com.askimed.nf.test.App - nf-test 0.9.5
-Aug-07 22:47:28.100 [main] INFO  com.askimed.nf.test.App - Arguments: [test, modules/local/deepcoil2/tests/main.nf.test, --profile, docker, --update-snapshot]
-Aug-07 22:47:29.727 [main] INFO  com.askimed.nf.test.App - Nextflow Version: 26.04.6
-Aug-07 22:47:29.729 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Load config from file /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nf-test.config...
-Aug-07 22:47:30.493 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Loaded 12 files from directory /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler in 0.029 sec
-Aug-07 22:47:30.494 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Found 1 files containing tests.
-Aug-07 22:47:30.494 [main] DEBUG com.askimed.nf.test.lang.dependencies.DependencyResolver - Found files: [/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/deepcoil2/tests/main.nf.test]
-Aug-07 22:47:30.673 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Found 1 tests to execute.
-Aug-07 22:47:30.673 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Started test plan
-Aug-07 22:47:30.674 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Running testsuite 'Test Process DEEPCOIL2' from file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/deepcoil2/tests/main.nf.test'.
-Aug-07 22:47:30.674 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Run test 'c03a7106: Run deepcoil2 - input one chunk and run'. type: com.askimed.nf.test.lang.process.ProcessTest
-Aug-07 22:48:43.828 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Init new snapshot file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/deepcoil2/tests/main.nf.test.snap'
-Aug-07 22:48:43.831 [main] DEBUG com.askimed.nf.test.lang.extensions.Snapshot - Snapshot 'Run deepcoil2 - input one chunk and run' not found.
-Aug-07 22:48:43.832 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Created snapshot 'Run deepcoil2 - input one chunk and run'
-Aug-07 22:48:43.858 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Wrote snapshots to file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/deepcoil2/tests/main.nf.test.snap'
-Aug-07 22:48:43.861 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Test 'c03a7106: Run deepcoil2 - input one chunk and run' finished. status: PASSED
-Aug-07 22:48:43.865 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Testsuite 'Test Process DEEPCOIL2' finished. snapshot file: true, skipped tests: false, failed tests: false
-Aug-07 22:48:43.870 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Executed 1 tests. 0 tests failed. Done!
+Aug-21 23:09:48.353 [main] INFO  com.askimed.nf.test.App - nf-test 0.9.5
+Aug-21 23:09:48.366 [main] INFO  com.askimed.nf.test.App - Arguments: [test, modules/local/phobius/tests/main.nf.test, --profile, docker, --update-snapshot]
+Aug-21 23:09:49.649 [main] INFO  com.askimed.nf.test.App - Nextflow Version: 26.04.6
+Aug-21 23:09:49.651 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Load config from file /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nf-test.config...
+Aug-21 23:09:50.398 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Loaded 15 files from directory /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler in 0.037 sec
+Aug-21 23:09:50.400 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Found 1 files containing tests.
+Aug-21 23:09:50.400 [main] DEBUG com.askimed.nf.test.lang.dependencies.DependencyResolver - Found files: [/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/phobius/tests/main.nf.test]
+Aug-21 23:09:50.627 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Found 1 tests to execute.
+Aug-21 23:09:50.628 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Started test plan
+Aug-21 23:09:50.628 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Running testsuite 'Test Process PHOBIUS' from file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/phobius/tests/main.nf.test'.
+Aug-21 23:09:50.628 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Run test 'c4a78e96: Run phobius in chunk and generate TSV file'. type: com.askimed.nf.test.lang.process.ProcessTest
+Aug-21 23:09:57.253 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Init new snapshot file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/phobius/tests/main.nf.test.snap'
+Aug-21 23:09:57.254 [main] DEBUG com.askimed.nf.test.lang.extensions.Snapshot - Snapshot 'Run phobius in chunk and generate TSV file' not found.
+Aug-21 23:09:57.255 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Created snapshot 'Run phobius in chunk and generate TSV file'
+Aug-21 23:09:57.265 [main] DEBUG com.askimed.nf.test.lang.extensions.SnapshotFile - Wrote snapshots to file '/dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/phobius/tests/main.nf.test.snap'
+Aug-21 23:09:57.265 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Test 'c4a78e96: Run phobius in chunk and generate TSV file' finished. status: PASSED
+Aug-21 23:09:57.267 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Testsuite 'Test Process PHOBIUS' finished. snapshot file: true, skipped tests: false, failed tests: false
+Aug-21 23:09:57.269 [main] INFO  com.askimed.nf.test.core.TestExecutionEngine - Executed 1 tests. 0 tests failed. Done!

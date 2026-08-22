@@ -1,0 +1,40 @@
+nextflow_process {
+    name "Test Process PHOBIUS"
+    script "../main.nf"
+    process "PHOBIUS"
+
+    test("Run phobius in chunk and generate TSV file") {
+        when {
+            process {
+                """
+                def chunk_fasta = file("\${workDir}/chunk_1.fasta")
+                chunk_fasta.text = '''\\
+                >Seq1_Signal_Peptide
+                MKVLLLLSAVIGASACQGGVAAQNCYKQRCARRCGTRCGLCCQAQCAKACGCCCA
+                >Seq2_Cytoplasmic
+                MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHG
+                '''.stripIndent()
+
+                input[0] = [
+                    [ id:'teste_phobius', single_end:false ],
+                    chunk_fasta
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+            
+            // Check if TSV was created
+            def phobius_out = process.out.predictions[0][1]
+            assert file(phobius_out).exists()
+            
+            // Check the result
+            def linhas = file(phobius_out).readLines()
+            assert linhas.any { it.contains("Seq1_Signal_Peptide") }
+            assert linhas.any { it.contains("Seq2_Cytoplasmic") }
+            
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}

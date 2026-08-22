@@ -1,0 +1,14 @@
+{
+    "Run phobius in chunk and generate TSV file": {
+        "content": [
+            [
+                "versions.yml:md5,05664cf0c760d30514419e4efefc4a17"
+            ]
+        ],
+        "timestamp": "2026-08-21T23:09:57.255325646",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}
