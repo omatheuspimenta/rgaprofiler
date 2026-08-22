@@ -53,6 +53,12 @@ workflow RGAPROFILER {
         )
     emit:
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
+
+    // Check the InterProScan database dir path exists and is a directory
+    if (!params.interproscan_db) {
+    exit 1, "ERROR: Path to InterProScan database not provided! Use --interproscan_db /path/to/directory"
+    }
+    ipr_dir = file(params.interproscan_db, checkIfExists: true)
 }
 
 /*

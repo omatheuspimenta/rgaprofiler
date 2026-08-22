@@ -1,0 +1,50 @@
+nextflow_process {
+    name "Test Process INTERPROSCAN"
+    script "../main.nf"
+    process "INTERPROSCAN"
+
+    test("Should run InterProScan using Mock files") {
+        when {
+            process {
+                """
+                // Create fasta
+                def chunk_fasta = file("\${workDir}/chunk_1.fasta")
+                chunk_fasta.text = '>Seq1\\nMKVLLLLSAVIGASACQGGVAAQNCYKQRCARRCGTRCGLCCQAQCAKACGCCCA\\n'
+
+                //Create a "Fake" folder of InterProScan
+                def mock_ipr_dir = file("\${workDir}/fake_interproscan_5.78")
+                mock_ipr_dir.mkdirs()
+                
+                def mock_sh = file("\${mock_ipr_dir}/interproscan.sh")
+                mock_sh.text = '''#!/bin/bash
+                if [[ "\$1" == "--version" ]]; then
+                    echo "InterProScan version 5.78-109.0"
+                    exit 0
+                fi
+                # Simulate the expected output
+                echo -e "Seq1\\t...fake_interpro_results..." > teste_ipr_interpro.tsv
+                '''.stripIndent()
+                
+                // mock permission
+                mock_sh.setPermissions('rwxr-xr-x')
+
+                // fed the chanels
+                input[0] = [
+                    [ id:'teste_ipr', single_end:false ],
+                    chunk_fasta
+                ]
+                input[1] = mock_ipr_dir // mock folder as argument
+                """
+            }
+        }
+        then {
+            assert process.success
+            
+            def tsv_out = process.out.tsv[0][1]
+            assert file(tsv_out).exists()
+            assert file(tsv_out).text.contains("Seq1")
+            
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}

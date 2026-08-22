@@ -1,0 +1,14 @@
+{
+    "Should run InterProScan using Mock files": {
+        "content": [
+            [
+                "versions.yml:md5,adef3eb3f58b500fe7b9375cb9b24247"
+            ]
+        ],
+        "timestamp": "2026-08-21T23:31:30.771031785",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

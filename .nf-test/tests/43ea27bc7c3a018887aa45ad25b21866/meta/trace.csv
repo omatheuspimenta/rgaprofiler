@@ -1,0 +1,2 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+1	c0/8280e3	2397045	INTERPROSCAN (teste_ipr)	COMPLETED	0	2026-08-21 23:31:28.925	657ms	13ms	114.6%	0	0	116.5 KB	450 B
