@@ -4,24 +4,45 @@ nextflow_pipeline {
     script "../main.nf"
     tag "pipeline"
 
+    // Requires softwares/ populated per docs/software-setup.md (InterProScan DB, DeepLoc2/
+    // SignalP6/DeepTMHMM license-gated weights) -- same local-only caveat as every real,
+    // functional module-level nf-test in this repo. interproscan_db has no schema default
+    // (it varies per install location) so it must be set here explicitly.
     test("-profile test") {
 
         when {
+            // nf-schema resolves a samplesheet's relative paths against the current launch
+            // directory, which for nf-test is its own isolated .nf-test/tests/<hash>/ dir,
+            // not the repo root -- so tests/testdata/samplesheet_test.csv's relative
+            // 'tests/testdata/r570_subsample.fasta' entry (correct for a real
+            // `nextflow run . -profile test` invoked from the repo root, see conf/test.config)
+            // won't resolve here. Generate an equivalent samplesheet with an absolute path instead.
+            def abs_samplesheet = file("${launchDir}/samplesheet_test_abs.csv")
+            abs_samplesheet.text = "sample,fasta\nr570_subsample,${projectDir}/tests/testdata/r570_subsample.fasta\n"
+
             params {
-                outdir = "$outputDir"
+                outdir           = "$outputDir"
+                input            = abs_samplesheet.toString()
+                interproscan_db  = "${projectDir}/softwares/InterProScan/interproscan-5.78-109.0"
             }
         }
 
         then {
             // stable_path: All files + folders in ${params.outdir}/ with a stable path (including file name)
             def stable_path = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
-            // stable_content: All files in ${params.outdir}/ with stable content
+            // stable_content: All files in ${params.outdir}/ with stable content (deeploc2/
+            // signalp6/deepcoil2/deeptmhmm/interproscan outputs are excluded via
+            // tests/.nftignore -- they embed floating-point scores or a run date that are
+            // never byte-stable run-to-run; see the comment there and each module's own
+            // nf-test for ground-truth value checks instead)
             def stable_content = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
             assert workflow.success
             assertAll(
                 { assert snapshot(
-                    // pipeline versions.yml file for multiqc from which Nextflow version is removed because we test pipelines on multiple Nextflow versions
-                    removeNextflowVersion("$outputDir/pipeline_info/rgaprofiler_software_mqc_versions.yml"),
+                    // This pipeline doesn't use MultiQC (decision #3, PLAN.md) -- its own
+                    // collated versions file, with the Nextflow version removed because we
+                    // test pipelines on multiple Nextflow versions.
+                    removeNextflowVersion("$outputDir/pipeline_info/rgaprofiler_software_versions.yml"),
                     // All stable path name, with a relative path
                     stable_path,
                     // All files with stable contents

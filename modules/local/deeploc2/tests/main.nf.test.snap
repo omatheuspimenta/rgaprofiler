@@ -1,0 +1,14 @@
+{
+    "Run deeploc2 - R570 subsample (see tests/testdata/README.md)": {
+        "content": [
+            [
+                "versions.yml:md5,101f29ed8793583d659297c0a13fbf08"
+            ]
+        ],
+        "timestamp": "2026-08-28T10:56:45.043857754",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

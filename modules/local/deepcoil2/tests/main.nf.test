@@ -3,34 +3,34 @@ nextflow_process {
     script "../main.nf"
     process "DEEPCOIL2"
 
-    test("Run deepcoil2 - input one chunk and run") {
+    test("Run deepcoil2 - R570 subsample (see tests/testdata/README.md)") {
         when {
             process {
                 """
-                // chunk mock from fasta_qc
-                def chunk_fasta = file("\${workDir}/chunk_1.fasta")
-                chunk_fasta.text = '''\\
-                >Seq1
-                MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHG
-                >Seq2
-                MKTLLLLSAVIGASACQGGVAAQNCYKQRCARRCGTRCGLCCQAQCAKACGCCCA
-                '''.stripIndent()
-
                 input[0] = [
-                    [ id:'teste_deepcoil', single_end:false ], // meta
-                    chunk_fasta
+                    [ id:'r570_subsample', single_end:false ], // meta
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
                 ]
                 """
             }
         }
         then {
             assert process.success
-            
-            // check if the output folder exists
+
             def results = process.out.predictions[0][1]
-            assert results.size() > 0
-            
-            // Check the version to ensure the complete run
+            assert results.size() == 4 // one per-protein .out file per input sequence
+
+            // SoffiXsponR570.09Cg101200.1.p is a known coiled-coil positive (see
+            // tests/testdata/README.md): softwares/DeepCoil/r570/ shows 174/234 residues
+            // with cc probability > 0.7. Assert a substantial coiled-coil stretch is
+            // still predicted here, without pinning an exact residue count (deep-learning
+            // inference can shift slightly with batch composition/hardware).
+            def cc_out = results.find { it.toString().contains('09Cg1012') }
+            assert cc_out != null
+            def cc_lines = file(cc_out).readLines().drop(1) // drop header
+            def high_cc = cc_lines.count { line -> (line.tokenize('\t')[1] as Double) > 0.5 }
+            assert high_cc > 100
+
             assert snapshot(process.out.versions).match()
         }
     }

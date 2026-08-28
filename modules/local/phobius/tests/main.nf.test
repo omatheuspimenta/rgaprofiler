@@ -3,37 +3,33 @@ nextflow_process {
     script "../main.nf"
     process "PHOBIUS"
 
-    test("Run phobius in chunk and generate TSV file") {
+    test("Run phobius - R570 subsample (see tests/testdata/README.md)") {
         when {
             process {
                 """
-                def chunk_fasta = file("\${workDir}/chunk_1.fasta")
-                chunk_fasta.text = '''\\
-                >Seq1_Signal_Peptide
-                MKVLLLLSAVIGASACQGGVAAQNCYKQRCARRCGTRCGLCCQAQCAKACGCCCA
-                >Seq2_Cytoplasmic
-                MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHG
-                '''.stripIndent()
-
                 input[0] = [
-                    [ id:'teste_phobius', single_end:false ],
-                    chunk_fasta
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
                 ]
                 """
             }
         }
         then {
             assert process.success
-            
-            // Check if TSV was created
+
             def phobius_out = process.out.predictions[0][1]
             assert file(phobius_out).exists()
-            
-            // Check the result
+
             def linhas = file(phobius_out).readLines()
-            assert linhas.any { it.contains("Seq1_Signal_Peptide") }
-            assert linhas.any { it.contains("Seq2_Cytoplasmic") }
-            
+            assert linhas.size() == 5 // header + 4 sequences
+
+            // SoffiXsponR570.7os1g018900.1.p is a known signal-peptide positive (see
+            // tests/testdata/README.md / softwares/SignalP6/r570/) -- Phobius's short-format
+            // TSV marks the SP column 'Y' for it.
+            def sp_line = linhas.find { it.contains('SoffiXsponR570.7os1g018900.1.p') }
+            assert sp_line != null
+            assert sp_line =~ /\s+Y\s+/
+
             assert snapshot(process.out.versions).match()
         }
     }

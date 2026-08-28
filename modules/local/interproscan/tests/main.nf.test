@@ -39,11 +39,50 @@ nextflow_process {
         }
         then {
             assert process.success
-            
+
             def tsv_out = process.out.tsv[0][1]
             assert file(tsv_out).exists()
             assert file(tsv_out).text.contains("Seq1")
-            
+
+            assert snapshot(process.out.versions).match()
+        }
+    }
+
+    // Functional test against the real InterProScan installation (softwares/InterProScan/,
+    // see docs/software-setup.md) -- the mocked test above covers module plumbing quickly;
+    // this one validates the thing this whole pipeline exists for: detecting a real RGA's
+    // domain architecture. SoffiXsponR570.10Eg022100.1.p is a real CC-NB-LRR resistance gene
+    // (NB-ARC + LRR + Coils, see tests/testdata/README.md / softwares/InterProScan/.../r570/).
+    // Scoped to just this one sequence (not the full 4-sequence subsample) to keep this
+    // slower, real test's runtime down.
+    test("Should detect NB-ARC/LRR domains on a real RGA sequence") {
+        when {
+            process {
+                """
+                // Extract just the RGA sequence out of the shared subsample FASTA (plain
+                // Groovy string parsing -- splitFasta is a channel operator, not usable
+                // as plain script code in this synchronous test block).
+                def subsample_records = file("\${projectDir}/tests/testdata/r570_subsample.fasta").text.split('(?=\\n>)')
+                def rga_record = subsample_records.find { it.contains('SoffiXsponR570.10Eg022100.1.p') }
+                def rga_fasta = file("\${workDir}/rga.fasta")
+                rga_fasta.text = rga_record.trim() + '\\n'
+
+                input[0] = [
+                    [ id:'rga_test', single_end:false ],
+                    rga_fasta
+                ]
+                input[1] = file("\${projectDir}/softwares/InterProScan/interproscan-5.78-109.0", checkIfExists: true)
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def tsv_out = process.out.tsv[0][1]
+            def hits = file(tsv_out).readLines()
+            assert hits.any { it.contains('NB-ARC domain') }
+            assert hits.any { it.contains('Leucine-rich repeat') }
+
             assert snapshot(process.out.versions).match()
         }
     }

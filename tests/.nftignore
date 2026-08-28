@@ -1,2 +1,25 @@
 .DS_Store
 pipeline_info/*.{html,json,txt,yml}
+
+# Excluded from content-snapshotting (paths are still checked via stable_path):
+# - deeploc2/signalp6/deepcoil2/deeptmhmm outputs embed floating-point neural-net scores
+#   that drift ~0.1-0.3% run-to-run/hardware-to-hardware (confirmed empirically while
+#   building tests/testdata/, see PLAN.md Stage 5), and deeptmhmm's exact TM-region count
+#   can shift by one at borderline boundaries depending on batch composition.
+# - interproscan's TSV embeds the run date as a literal column, so it is never stable
+#   across days.
+# - rga/ (rga_classify) inherits the same nondeterminism/dates transitively (it's derived
+#   from the five above) and also embeds its own run timestamp in run_metadata.json,
+#   report.html and report.md.
+# - summary_report/ (rga_report) has no timestamp of its own but its counts are derived
+#   from rga_predictions.tsv, so it inherits the same transitive nondeterminism as rga/.
+# Ground-truth value checks for all of these live in each module's own nf-test instead
+# (modules/local/*/tests/main.nf.test), which assert on the stable, discrete part of each
+# result (e.g. the predicted class or "has a signal peptide"), not exact floats/dates.
+deeploc2/**
+signalp6/**
+deepcoil2/**
+deeptmhmm/**
+interproscan/**
+rga/**
+summary_report/**

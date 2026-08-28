@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: deepcoil2
+description: Predict coiled-coil domains in protein sequences with DeepCoil2
+keywords:
+  - coiled-coil
+  - protein structure
+  - deep learning
+tools:
+  - deepcoil:
+      description: |
+        Fast and accurate prediction of coiled-coil domains in protein sequences.
+      homepage: https://github.com/labstructbioinf/DeepCoil
+      documentation: https://github.com/labstructbioinf/DeepCoil
+      doi: 10.1093/bioinformatics/bty1062
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Input protein FASTA file
+        pattern: "*.{fa,fasta}"
+output:
+  predictions:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - results/*:
+          type: file
+          description: Per-protein coiled-coil probability tables, one file per input sequence
+          pattern: "results/*"
+  results_dir:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - results:
+          type: directory
+          description: Same per-protein output files as `predictions`, as one directory (for consumers like rga_classify that expect --deepcoil DIR)
+          pattern: "results"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

@@ -1,11 +1,11 @@
 {
-    "Run phobius in chunk and generate TSV file": {
+    "Run phobius - R570 subsample (see tests/testdata/README.md)": {
         "content": [
             [
                 "versions.yml:md5,05664cf0c760d30514419e4efefc4a17"
             ]
         ],
-        "timestamp": "2026-08-21T23:09:57.255325646",
+        "timestamp": "2026-08-28T10:54:48.058795508",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

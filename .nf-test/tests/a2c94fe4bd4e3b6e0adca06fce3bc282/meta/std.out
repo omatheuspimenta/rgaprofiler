@@ -1,0 +1,5 @@
+[PIPELINE] omatheuspimenta/rgaprofiler 1.0.0dev | profile=docker
+[WORKDIR] /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/a2c94fe4bd4e3b6e0adca06fce3bc282/work
+[PROCESS d0/1f1d0e] SIGNALP6 (r570_subsample)
+
+[SUCCESS] completed=1 failed=0 cached=0

@@ -1,0 +1,156 @@
+nextflow_process {
+    name "Test Process RGA_REPORT"
+    script "../main.nf"
+    process "RGA_REPORT"
+
+    // Chains the real six upstream tools + rga_classify (same setup{} as
+    // modules/local/rga_classify/tests/main.nf.test) against tests/testdata/r570_subsample.fasta,
+    // so this exercises the real rga_predictions.tsv/rga_summary_counts.tsv schema rga_classify
+    // actually produces -- the report script's own correctness (parsing, HTML rendering) is what
+    // this test targets, not the classification logic itself (already validated exhaustively in
+    // Stage 6 against the external repo's real R570 reference output). The versions.yml fed in
+    // is a small hand-written fixture in the real collated format, not the full workflow-level
+    // collation machinery (that's Groovy config code, not something a process-level test replicates).
+    // Needs `-profile docker` and softwares/{DeepLoc2,SignalP6,DeepTMHMM,InterProScan}/ populated
+    // per docs/software-setup.md, same as every upstream module's own test.
+    setup {
+        run("DEEPCOIL2") {
+            script "../../deepcoil2/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+        run("PHOBIUS") {
+            script "../../phobius/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+        run("INTERPROSCAN") {
+            script "../../interproscan/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/InterProScan/interproscan-5.78-109.0", checkIfExists: true)
+                """
+            }
+        }
+        run("DEEPLOC2") {
+            script "../../deeploc2/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/DeepLoc2/DeepLoc2/models", checkIfExists: true)
+                input[2] = file("\${projectDir}/softwares/DeepLoc2/torch_cache", checkIfExists: true)
+                """
+            }
+        }
+        run("SIGNALP6") {
+            script "../../signalp6/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/SignalP6/signalp-6-package/models", checkIfExists: true)
+                """
+            }
+        }
+        run("DEEPTMHMM") {
+            script "../../deeptmhmm/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/DeepTMHMM/DeepTMHMM-Academic-License-v1.0", checkIfExists: true)
+                """
+            }
+        }
+        run("RGA_CLASSIFY") {
+            script "../../rga_classify/main.nf"
+            process {
+                """
+                input[0] = INTERPROSCAN.out.tsv
+                    .join(PHOBIUS.out.predictions)
+                    .join(DEEPTMHMM.out.predictions.map { meta, files -> [meta, files.find { it.toString().endsWith('.gff3') }] })
+                    .join(SIGNALP6.out.predictions.map { meta, files -> [meta, files.find { it.toString().contains('_predictions.txt') }] })
+                    .join(DEEPLOC2.out.predictions)
+                    .join(DEEPCOIL2.out.results_dir)
+                """
+            }
+        }
+    }
+
+    test("Run rga_report - real rga_classify output") {
+        when {
+            process {
+                """
+                // Named collated_versions.yml, not versions.yml -- the latter would collide
+                // with the process's own versions.yml output once staged into its task dir
+                // (bash -C/noclobber refuses to overwrite it; the real pipeline never hits
+                // this because softwareVersionsToYAML().collectFile() picks its own name).
+                def versions_fixture = file("\${workDir}/collated_versions.yml")
+                versions_fixture.text = '''\\
+                "FASTA_QC":
+                    seqkit: v2.13.0
+                "INTERPROSCAN":
+                    interproscan: 5.78-109.0
+                "RGA_CLASSIFY":
+                    rga_classify: 0.0.1
+                '''.stripIndent()
+
+                input[0] = RGA_CLASSIFY.out.results
+                    .map { meta, files ->
+                        [
+                            meta,
+                            files.find { it.toString().endsWith('rga_predictions.tsv') },
+                            files.find { it.toString().endsWith('rga_summary_counts.tsv') },
+                        ]
+                    }
+                    .combine(channel.of(versions_fixture))
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            // A single-file glob match comes through as a bare Path, not a List (see
+            // Stage 5's PLAN.md notes) -- report_out/* only ever matches report.html today,
+            // so don't assume List semantics.
+            def report_out = process.out.report[0][1]
+            def report_html = report_out instanceof List
+                ? report_out.find { it.toString().endsWith('report.html') }
+                : report_out
+            assert report_html != null
+            assert report_html.toString().endsWith('report.html')
+
+            def html_text = file(report_html).text
+            // SoffiXsponR570.10Eg022100.1.p (the real RGA in the subsample) should be
+            // reflected in the RGA subclass table as a CNL.
+            assert html_text.contains('CNL')
+            assert html_text.contains('InterProScan')
+            assert html_text.contains('seqkit')
+
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}

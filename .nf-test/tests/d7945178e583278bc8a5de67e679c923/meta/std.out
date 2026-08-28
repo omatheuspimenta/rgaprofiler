@@ -1,0 +1,5 @@
+[PIPELINE] omatheuspimenta/rgaprofiler 1.0.0dev | profile=docker
+[WORKDIR] /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/d7945178e583278bc8a5de67e679c923/work
+[PROCESS 6c/1c7e0c] DEEPLOC2 (r570_subsample)
+
+[SUCCESS] completed=1 failed=0 cached=0

@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: deeptmhmm
+description: Predict transmembrane helices and topology in protein sequences with DeepTMHMM
+keywords:
+  - transmembrane helices
+  - protein topology
+  - deep learning
+tools:
+  - deeptmhmm:
+      description: |
+        DeepTMHMM predicts the topology of alpha-helical and beta-barrel
+        transmembrane proteins using a deep learning model built on a
+        protein language model (ESM1b).
+      homepage: https://dtu.biolib.com/DeepTMHMM/
+      documentation: https://dtu.biolib.com/DeepTMHMM/
+      doi: 10.1101/2022.04.08.487609
+      licence: ["CC BY-NC-SA 4.0 (academic/non-commercial use only)"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Input protein FASTA file
+        pattern: "*.{fa,fasta}"
+  - - deeptmhmm_weights:
+        type: directory
+        description: |
+          DTU/BioLib-distributed DeepTMHMM model weights directory
+          (softwares_dir/DeepTMHMM/DeepTMHMM-Academic-License-v1.0); CC BY-NC-SA 4.0
+          license-gated, supplied by the user, validated by bin/check_software_present.sh deeptmhmm.
+output:
+  predictions:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - results/*:
+          type: file
+          description: |
+            Per-run prediction outputs: TMRs.gff3 (predicted transmembrane/signal/inside/
+            outside regions), predicted_topologies.3line (per-residue topology string),
+            deeptmhmm_results.md, plus per-sequence probability plots.
+          pattern: "results/*"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

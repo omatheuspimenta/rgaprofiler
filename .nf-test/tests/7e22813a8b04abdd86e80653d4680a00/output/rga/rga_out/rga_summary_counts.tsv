@@ -1,0 +1,5 @@
+level	rga_family	rga_subclass	n_proteins	percent_of_proteome
+family	Non-RGA	ALL	3	75.0
+family	NLR	ALL	1	25.0
+subclass	NLR	CNL	1	25.0
+subclass	Non-RGA	NA	3	75.0

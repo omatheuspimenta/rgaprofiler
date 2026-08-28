@@ -38,6 +38,47 @@
                 }
             }
         },
+        "software_paths_options": {
+            "title": "Third-party software options",
+            "type": "object",
+            "fa_icon": "fas fa-boxes",
+            "description": "Paths to user-supplied, license-gated third-party software/data required by individual analysis tools.",
+            "required": ["interproscan_db"],
+            "properties": {
+                "interproscan_db": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "Path to the InterProScan installation/database directory (e.g. the unpacked interproscan-5.78-109.0 release).",
+                    "help_text": "InterProScan's member databases are large and licensed separately from this pipeline, so they are not bundled in the pipeline's Docker images. Download and unpack InterProScan yourself and point this parameter at that directory. See docs/software-setup.md.",
+                    "fa_icon": "fas fa-database"
+                },
+                "softwares_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Root directory containing user-supplied, license-gated third-party software/data (e.g. DeepTMHMM, SignalP6, DeepLoc2 model weights). Defaults to a `softwares/` directory alongside the pipeline code.",
+                    "help_text": "Several tools used by this pipeline (DeepTMHMM, SignalP6, DeepLoc2, InterProScan) cannot redistribute their model weights/databases for licensing reasons. Each tool's required files must be placed under `<softwares_dir>/<Tool>/` before running the pipeline; see docs/software-setup.md for what each tool expects. A pre-flight check validates these files are present before the corresponding process runs.",
+                    "fa_icon": "fas fa-folder-tree"
+                },
+                "use_gpu": {
+                    "type": "string",
+                    "default": "auto",
+                    "enum": ["auto", "true", "false"],
+                    "description": "Whether to use a GPU for GPU-capable tools (DeepCoil2, DeepLoc2, DeepTMHMM, SignalP6). 'auto' probes for a usable NVIDIA GPU on the executing host; 'true'/'false' force it on/off.",
+                    "help_text": "GPU-capable processes are labelled `process_gpu`. When GPU usage resolves to true, the container is launched with `--gpus all` (Docker/Podman) or `--nv` (Singularity/Apptainer) and requests an accelerator. Non-GPU-capable tools (Phobius, InterProScan, fasta_qc) ignore this setting entirely. 'auto' detection reflects whatever host runs bin/detect_gpu.sh at process-scheduling time; under cluster executors where that may differ from the actual compute node, set this explicitly instead of relying on 'auto'.",
+                    "fa_icon": "fas fa-microchip"
+                },
+                "fasta_qc_chunk_size": {
+                    "type": "integer",
+                    "default": 5000,
+                    "minimum": 1,
+                    "description": "Number of sequences per chunk when FASTA_QC splits the cleaned input FASTA.",
+                    "help_text": "FASTA_QC always cleans the input (dedup, strip stop-codon '*', uppercase) and additionally splits the result into chunks of this size. Chunk output isn't consumed by any process yet — per-tool parallel fan-out over chunks is a later design decision — so this default is provisional and likely to be revisited.",
+                    "fa_icon": "fas fa-layer-group",
+                    "hidden": true
+                }
+            }
+        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -166,6 +207,9 @@
     "allOf": [
         {
             "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/software_paths_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

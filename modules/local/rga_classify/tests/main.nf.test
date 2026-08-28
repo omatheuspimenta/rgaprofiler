@@ -1,0 +1,129 @@
+nextflow_process {
+    name "Test Process RGA_CLASSIFY"
+    script "../main.nf"
+    process "RGA_CLASSIFY"
+
+    // Functional test against the real 'rga_classify:baseline' image, fed with the *real*
+    // outputs of all six upstream tools run against tests/testdata/r570_subsample.fasta
+    // (chained via setup{} below) -- not hand-written fixtures, so this also exercises the
+    // exact file formats/paths this pipeline's own modules produce as rga_classify inputs.
+    // The classification *logic* itself was validated separately and far more thoroughly:
+    // running this same vendored code against the real, full R570 outputs bundled in
+    // github.com/omatheuspimenta/SugarcaneTranscriptomics's data/rgas/ reproduced
+    // rga_predictions.tsv byte-for-byte against that repo's own results/rgas/SaccharumR570/
+    // (see PLAN.md Stage 6). Needs `-profile docker` and softwares/{DeepLoc2,SignalP6,DeepTMHMM,InterProScan}/
+    // populated per docs/software-setup.md, same as every upstream module's own test.
+    setup {
+        run("DEEPCOIL2") {
+            script "../../deepcoil2/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+        run("PHOBIUS") {
+            script "../../phobius/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+        run("INTERPROSCAN") {
+            script "../../interproscan/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/InterProScan/interproscan-5.78-109.0", checkIfExists: true)
+                """
+            }
+        }
+        run("DEEPLOC2") {
+            script "../../deeploc2/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/DeepLoc2/DeepLoc2/models", checkIfExists: true)
+                input[2] = file("\${projectDir}/softwares/DeepLoc2/torch_cache", checkIfExists: true)
+                """
+            }
+        }
+        run("SIGNALP6") {
+            script "../../signalp6/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/SignalP6/signalp-6-package/models", checkIfExists: true)
+                """
+            }
+        }
+        run("DEEPTMHMM") {
+            script "../../deeptmhmm/main.nf"
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ],
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/DeepTMHMM/DeepTMHMM-Academic-License-v1.0", checkIfExists: true)
+                """
+            }
+        }
+    }
+
+    test("Run rga_classify - R570 subsample, real six-tool outputs") {
+        when {
+            process {
+                """
+                input[0] = INTERPROSCAN.out.tsv
+                    .join(PHOBIUS.out.predictions)
+                    .join(DEEPTMHMM.out.predictions.map { meta, files -> [meta, files.find { it.toString().endsWith('.gff3') }] })
+                    .join(SIGNALP6.out.predictions.map { meta, files -> [meta, files.find { it.toString().contains('_predictions.txt') }] })
+                    .join(DEEPLOC2.out.predictions)
+                    .join(DEEPCOIL2.out.results_dir)
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def results = process.out.results[0][1]
+            def predictions_tsv = results.find { it.toString().endsWith('rga_predictions.tsv') }
+            assert predictions_tsv != null
+
+            // SoffiXsponR570.10Eg022100.1.p is the real CC-NB-LRR resistance gene in the
+            // subsample (see tests/testdata/README.md) -- assert it's actually called an
+            // RGA, and specifically an NLR carrying NB-ARC (the one assertion that matters
+            // most given this whole pipeline's purpose).
+            def lines = file(predictions_tsv).readLines()
+            def header = lines[0].tokenize('\t')
+            def rga_col = header.indexOf('is_rga')
+            def family_col = header.indexOf('rga_family')
+            def features_col = header.indexOf('features_found')
+            def rga_line = lines.find { it.startsWith('SoffiXsponR570.10Eg022100.1.p\t') }
+            assert rga_line != null
+            def fields = rga_line.tokenize('\t')
+            assert fields[rga_col] == 'True'
+            assert fields[family_col] == 'NLR'
+            assert fields[features_col].contains('NB-ARC')
+
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}

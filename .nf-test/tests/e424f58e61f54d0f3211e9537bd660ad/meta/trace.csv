@@ -1,0 +1,2 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+1	ef/425302	16134	DEEPCOIL2 (r570_subsample)	COMPLETED	0	2026-08-28 18:24:27.447	22.2s	21s	1210.5%	4.1 GB	98.8 GB	485 MB	67.8 KB

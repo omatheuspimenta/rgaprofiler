@@ -1,0 +1,21 @@
+DEEPCOIL2:
+  deepcoil: 2.0.1
+DEEPLOC2:
+  deeploc2: 1.0.0
+DEEPTMHMM:
+  deeptmhmm: 1.0
+FASTA_QC:
+  seqkit: v2.13.0
+INTERPROSCAN:
+  interproscan: 5.78-109.0
+PHOBIUS:
+  phobius: 1.01
+RGA_CLASSIFY:
+  rga_classify: 0.0.1
+RGA_REPORT:
+  pandas: 3.0.5
+SIGNALP6:
+  signalp6: 6.0h
+Workflow:
+    omatheuspimenta/rgaprofiler: v1.0.0dev
+    Nextflow: 26.04.6

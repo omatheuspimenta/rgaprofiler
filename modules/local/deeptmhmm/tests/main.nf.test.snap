@@ -1,0 +1,14 @@
+{
+    "Run deeptmhmm - R570 subsample (see tests/testdata/README.md)": {
+        "content": [
+            [
+                "versions.yml:md5,2ac4c764797a36abc1ceaf1fd67b3148"
+            ]
+        ],
+        "timestamp": "2026-08-28T11:03:26.000156541",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

@@ -24,7 +24,7 @@
                     ]
                 ],
                 "2": [
-                    "versions.yml:md5,0efa55ca8cb8d065debfb68a97ac5d31"
+                    "versions.yml:md5,cd460e9c2087aa02880a0362898682df"
                 ],
                 "chunks": [
                     [
@@ -48,11 +48,11 @@
                     ]
                 ],
                 "versions": [
-                    "versions.yml:md5,0efa55ca8cb8d065debfb68a97ac5d31"
+                    "versions.yml:md5,cd460e9c2087aa02880a0362898682df"
                 ]
             }
         ],
-        "timestamp": "2026-08-07T22:00:16.18277773",
+        "timestamp": "2026-08-28T14:49:05.669088286",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

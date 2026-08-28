@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: phobius
+description: Predict signal peptides and transmembrane topology with Phobius
+keywords:
+  - signal peptide
+  - transmembrane
+  - topology prediction
+tools:
+  - phobius:
+      description: |
+        A combined transmembrane topology and signal peptide predictor.
+      homepage: https://software.sbc.su.se/cgi-bin/request.cgi?project=phobius
+      documentation: https://software.sbc.su.se/cgi-bin/request.cgi?project=phobius
+      doi: 10.1016/j.jmb.2004.03.016
+      licence: ["Academic/non-commercial (Stockholm Bioinformatics Center)"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Input protein FASTA file
+        pattern: "*.{fa,fasta}"
+output:
+  predictions:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - "*_phobius.tsv":
+          type: file
+          description: Short-format Phobius predictions (signal peptide + TM topology) for all input sequences
+          pattern: "*_phobius.tsv"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

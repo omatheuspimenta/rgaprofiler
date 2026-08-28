@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: interproscan
+description: Scan protein sequences against InterProScan's member databases for domain/functional annotation
+keywords:
+  - domain annotation
+  - functional annotation
+  - protein families
+tools:
+  - interproscan:
+      description: |
+        Scans protein sequences against InterPro's signature databases (Pfam, PANTHER,
+        Gene3D, SUPERFAMILY, MobiDB-lite, and others) to predict domains and functional sites.
+        Licensed sub-analyses (Phobius, SignalP 4.1, TMHMM 2.0c) are optional and run only if
+        the user has separately obtained and placed them in the InterProScan install (see
+        docs/software-setup.md).
+      homepage: https://interproscan-docs.readthedocs.io/
+      documentation: https://interproscan-docs.readthedocs.io/
+      doi: 10.1093/bioinformatics/btu031
+      licence: ["Apache-2.0 (InterProScan itself); member databases and optional licensed sub-analyses carry their own separate licences"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Input protein FASTA file
+        pattern: "*.{fa,fasta}"
+  - - ipr_dir:
+        type: directory
+        description: |
+          Path to a local InterProScan installation directory (containing interproscan.sh
+          and its data/ directory) — see params.interproscan_db and docs/software-setup.md.
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - "*_interpro.tsv":
+          type: file
+          description: InterProScan TSV output (standard 14/15-column format, no header)
+          pattern: "*_interpro.tsv"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

@@ -1,0 +1,5 @@
+[PIPELINE] omatheuspimenta/rgaprofiler 1.0.0dev | profile=docker
+[WORKDIR] /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/43ea27bc7c3a018887aa45ad25b21866/work
+[PROCESS cb/f36908] INTERPROSCAN (teste_ipr)
+
+[SUCCESS] completed=1 failed=0 cached=0

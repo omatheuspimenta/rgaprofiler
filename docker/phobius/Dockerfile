@@ -14,3 +14,10 @@ RUN chown -R root:root /opt/phobius && \
 
 # add the phobius directory to the PATH environment variable so that the phobius.pl script can be run from anywhere in the container.
 ENV PATH="/opt/phobius:${PATH}"
+
+# Run as a non-root user by default. Nextflow's docker profile overrides this via
+# `-u $(id -u):$(id -g)` at task execution time regardless, but this keeps the
+# image itself sane for anyone running it directly.
+RUN useradd --create-home --shell /bin/bash phobius
+USER phobius
+WORKDIR /data

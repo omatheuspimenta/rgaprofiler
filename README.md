@@ -13,47 +13,40 @@
 
 ## Introduction
 
-**omatheuspimenta/rgaprofiler** is a bioinformatics pipeline that ...
+**omatheuspimenta/rgaprofiler** is a bioinformatics pipeline that predicts RGAs (Resistance Gene Analogs) in plant proteomes. Given one or more protein FASTA files, it cleans and deduplicates the input, runs six independent protein-prediction tools in parallel (DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6, DeepTMHMM), and combines their outputs into per-protein RGA family/subclass calls using the classification logic from [`SugarcaneTranscriptomics`](https://github.com/omatheuspimenta/SugarcaneTranscriptomics), plus a self-contained HTML summary report. See [`docs/output.md`](docs/output.md) for the full output structure.
 
-<!-- TODO nf-core:
-   Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
-   major pipeline sections and the types of output it produces. You're giving an overview to someone new
-   to nf-core here, in 15-20 seconds. For an example, see https://github.com/nf-core/rnaseq/blob/master/README.md#introduction
--->
+1. Input QC: deduplicate, strip trailing stop codons, split into chunks ([`FASTA_QC`](docs/output.md#fasta_qc))
+2. Run six prediction tools in parallel: coiled-coil domains ([`DeepCoil2`](docs/output.md#deepcoil2)), signal peptides + TM topology ([`Phobius`](docs/output.md#phobius)), domain/functional annotation ([`InterProScan`](docs/output.md#interproscan)), subcellular localization ([`DeepLoc2`](docs/output.md#deeploc2)), signal peptides ([`SignalP6`](docs/output.md#signalp6)), transmembrane helices ([`DeepTMHMM`](docs/output.md#deeptmhmm))
+3. Classify each protein as an RGA (family/subclass) from the combined evidence ([`RGA_CLASSIFY`](docs/output.md#rga-classification))
+4. Render a self-contained HTML summary report ([`RGA_REPORT`](docs/output.md#summary-report))
 
-<!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/community/brand/workflow-schematics#examples for examples.   -->
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
+DeepCoil2, DeepLoc2, SignalP6, and DeepTMHMM can run on a GPU (`--use_gpu`); Phobius, InterProScan, and the RGA classification/report steps are CPU-only. Several of the underlying tools (InterProScan's database, DeepTMHMM/SignalP6/DeepLoc2's model weights) are license-gated and must be downloaded separately by the user — see [`docs/software-setup.md`](docs/software-setup.md).
 
 ## Usage
 
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.
 
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
-
 First, prepare a samplesheet with your input data that looks as follows:
 
 `samplesheet.csv`:
 
 ```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
+sample,fasta
+sample1,/path/to/sample1.protein.fasta
 ```
 
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
+Each row is one protein FASTA to profile. `sample` is a free-form identifier; `fasta` must exist and end in `.fa`/`.fasta` (optionally gzipped).
 
--->
+You'll also need the license-gated software/databases each tool expects under `--softwares_dir` (default `./softwares`) — see [`docs/software-setup.md`](docs/software-setup.md) for exactly what to download and where to put it, and `--interproscan_db` pointed at your InterProScan database directory (no default, since it varies per install).
 
 Now, you can run the pipeline using:
-
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
 
 ```bash
 nextflow run omatheuspimenta/rgaprofiler \
    -profile <docker/singularity/.../institute> \
    --input samplesheet.csv \
+   --interproscan_db /path/to/interproscan-5.XX-YY.0 \
    --outdir <OUTDIR>
 ```
 
@@ -64,20 +57,13 @@ nextflow run omatheuspimenta/rgaprofiler \
 
 omatheuspimenta/rgaprofiler was originally written by Pimenta-Zanon, M. H..
 
-We thank the following people for their extensive assistance in the development of this pipeline:
-
-<!-- TODO nf-core: If applicable, make list of people who have also contributed -->
-
 ## Contributions and Support
 
 If you would like to contribute to this pipeline, please see the [contributing guidelines](docs/CONTRIBUTING.md).
 
 ## Citations
 
-<!-- TODO nf-core: Add citation for pipeline after first release. Uncomment lines below and update Zenodo doi and badge at the top of this file. -->
-<!-- If you use omatheuspimenta/rgaprofiler for your analysis, please cite it using the following doi: [10.5281/zenodo.XXXXXX](https://doi.org/10.5281/zenodo.XXXXXX) -->
-
-<!-- TODO nf-core: Add bibliography of tools and data used in your pipeline -->
+<!-- Add a Zenodo DOI citation here after the pipeline's first tagged release; update the badge at the top of this file too. -->
 
 An extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.
 

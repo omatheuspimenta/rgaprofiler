@@ -1,0 +1,2 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+1	d0/1f1d0e	56732	SIGNALP6 (r570_subsample)	COMPLETED	0	2026-08-28 18:32:34.596	20.9s	19.9s	486.5%	2.2 GB	10.9 GB	9.2 GB	32.5 KB

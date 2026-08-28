@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rgaprofiler summary -- r570_subsample</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 960px;
+         margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; background: #fff; }
+  h1 { border-bottom: 3px solid #2c5f2d; padding-bottom: .3rem; }
+  h2 { margin-top: 2rem; color: #2c5f2d; }
+  .stat { display: inline-block; margin: .5rem 2rem .5rem 0; }
+  .stat .n { font-size: 2rem; font-weight: bold; display: block; }
+  .stat .label { color: #555; font-size: .9rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { border: 1px solid #ddd; padding: .4rem .6rem; text-align: left; }
+  th { background: #2c5f2d; color: #fff; }
+  tr:nth-child(even) { background: #f6f6f6; }
+  code { background: #f0f0f0; padding: .1rem .3rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>rgaprofiler summary report</h1>
+<p>Sample / organism: <code>r570_subsample</code></p>
+
+<div class="stat"><span class="n">4</span><span class="label">proteins analysed</span></div>
+<div class="stat"><span class="n">1</span><span class="label">RGA candidates (25.0%)</span></div>
+
+<h2>RGA families</h2>
+<table><thead><tr><th>RGA family</th><th>proteins</th><th>% of proteome</th></tr></thead><tbody><tr><td>Non-RGA</td><td>3</td><td>75.00</td></tr><tr><td>NLR</td><td>1</td><td>25.00</td></tr></tbody></table>
+
+<h2>RGA subclasses (excluding Non-RGA)</h2>
+<table><thead><tr><th>RGA subclass</th><th>proteins</th><th>% of proteome</th></tr></thead><tbody><tr><td>CNL</td><td>1</td><td>25.00</td></tr></tbody></table>
+
+<h2>Per-tool contribution</h2>
+<p>Proteins for which each underlying tool reported evidence feeding into the RGA call
+(see <code>rga_predictions.tsv</code> for the per-protein detail).</p>
+<table><thead><tr><th>Tool</th><th>proteins with evidence</th><th>% of proteome</th></tr></thead><tbody><tr><td>InterProScan (domain hit, incl. Coils/Rx domain)</td><td>2</td><td>50.0</td></tr><tr><td>Phobius (signal peptide or TM)</td><td>2</td><td>50.0</td></tr><tr><td>DeepTMHMM (TM helix)</td><td>1</td><td>25.0</td></tr><tr><td>SignalP 6.0 (signal peptide)</td><td>1</td><td>25.0</td></tr><tr><td>DeepCoil2 (coiled coil)</td><td>1</td><td>25.0</td></tr><tr><td>DeepLoc 2.0 (localisation predicted)</td><td>4</td><td>100.0</td></tr></tbody></table>
+
+<h2>Detailed outputs</h2>
+<ul>
+<li><a href="../rga/rga_out/report.html">Full RGA classification report (rga_classify)</a></li><li><a href="../rga/rga_out/rga_predictions.tsv">Per-protein predictions (rga_predictions.tsv)</a></li><li><a href="../interproscan/">InterProScan domain hits</a></li><li><a href="../phobius/">Phobius</a></li><li><a href="../deeptmhmm/">DeepTMHMM</a></li><li><a href="../signalp6/">SignalP 6.0</a></li><li><a href="../deeploc2/">DeepLoc 2.0</a></li><li><a href="../deepcoil2/">DeepCoil2</a></li>
+</ul>
+
+<h2>Software versions</h2>
+<table><thead><tr><th>Process</th><th>Tool</th><th>Version</th></tr></thead><tbody><tr><td>DEEPCOIL2</td><td>deepcoil</td><td>2.0.1</td></tr><tr><td>DEEPLOC2</td><td>deeploc2</td><td>1.0.0</td></tr><tr><td>DEEPTMHMM</td><td>deeptmhmm</td><td>1.0</td></tr><tr><td>FASTA_QC</td><td>seqkit</td><td>v2.13.0</td></tr><tr><td>INTERPROSCAN</td><td>interproscan</td><td>5.78-109.0</td></tr><tr><td>PHOBIUS</td><td>phobius</td><td>1.01</td></tr><tr><td>RGA_CLASSIFY</td><td>rga_classify</td><td>0.0.1</td></tr><tr><td>SIGNALP6</td><td>signalp6</td><td>6.0h</td></tr><tr><td>Workflow</td><td>Nextflow</td><td>26.04.6</td></tr><tr><td>Workflow</td><td>omatheuspimenta/rgaprofiler</td><td>v1.0.0dev</td></tr></tbody></table>
+
+</body>
+</html>

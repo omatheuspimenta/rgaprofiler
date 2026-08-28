@@ -1,0 +1,41 @@
+nextflow_process {
+    name "Test Process SIGNALP6"
+    script "../main.nf"
+    process "SIGNALP6"
+
+    // Functional test against the real 'signalp6:baseline' image and real,
+    // user-supplied DTU weights (softwares/SignalP6/) -- same pattern as
+    // modules/local/deepcoil2, phobius and deeploc2. Needs `-profile docker`
+    // and softwares/SignalP6/ populated per docs/software-setup.md.
+    test("Run signalp6 - R570 subsample (see tests/testdata/README.md)") {
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ], // meta
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/SignalP6/signalp-6-package/models", checkIfExists: true)
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def results = process.out.predictions[0][1]
+            assert results.size() > 0
+
+            // SoffiXsponR570.7os1g018900.1.p is a known signal-peptide positive
+            // (softwares/SignalP6/.../r570/prediction_results.txt, cleavage site 30-31 --
+            // see tests/testdata/README.md). Assert the discrete SP call, not the exact
+            // probability/cleavage position (both drift slightly run-to-run).
+            def predictions_file = results.find { it.toString().contains('_predictions.txt') }
+            assert predictions_file != null
+            def sp_line = file(predictions_file).readLines().find { it.startsWith('SoffiXsponR570.7os1g018900.1.p') }
+            assert sp_line != null
+            assert sp_line.contains('\tSP\t')
+
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}

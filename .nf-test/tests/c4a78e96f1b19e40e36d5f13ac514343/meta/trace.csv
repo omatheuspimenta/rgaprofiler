@@ -1,2 +1,0 @@
-task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-1	02/38b468	2388088	PHOBIUS (teste_phobius)	COMPLETED	0	2026-08-21 23:09:55.354	746ms	56ms	104.2%	12.4 MB	15.8 MB	340.2 KB	1.6 KB

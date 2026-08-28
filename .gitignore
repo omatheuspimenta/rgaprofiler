@@ -8,3 +8,14 @@ testing*
 *.pyc
 null/
 .lineage/
+
+# User-supplied, license-gated third-party software/data (see docs/software-setup.md).
+# Enormous (~600GB) and untracked by design — every tool's real weights/binaries/DB live
+# here, supplied manually per docs/software-setup.md, validated by a pre-flight check
+# before the corresponding process runs. Never commit this directory's contents.
+softwares/
+
+# Working documents for whoever is developing this pipeline (history/decisions/rationale,
+# and a practical run/test cheat-sheet) -- not part of the published repo.
+PLAN.md
+ORIENTATIONS.md

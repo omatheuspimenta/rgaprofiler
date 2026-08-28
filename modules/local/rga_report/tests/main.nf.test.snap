@@ -1,0 +1,14 @@
+{
+    "Run rga_report - real rga_classify output": {
+        "content": [
+            [
+                "versions.yml:md5,22e12e78feaf0f1a4da18ef63f3ab60e"
+            ]
+        ],
+        "timestamp": "2026-08-28T14:14:42.596208982",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

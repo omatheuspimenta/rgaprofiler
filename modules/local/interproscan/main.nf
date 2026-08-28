@@ -13,6 +13,7 @@ process INTERPROSCAN {
     path "versions.yml"                    , emit: versions
 
     script:
+    def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
     # Since we inject the path, the interproscan.sh script will be in the root of ipr_dir
@@ -22,7 +23,8 @@ process INTERPROSCAN {
         -f TSV \\
         -o ${prefix}_interpro.tsv \\
         -cpu ${task.cpus} \\
-        -dp 
+        -dp \\
+        ${args}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

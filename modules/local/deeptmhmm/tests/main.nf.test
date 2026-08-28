@@ -1,0 +1,45 @@
+nextflow_process {
+    name "Test Process DEEPTMHMM"
+    script "../main.nf"
+    process "DEEPTMHMM"
+
+    // Functional test against the real 'deeptmhmm:baseline' image and real,
+    // user-supplied DTU/BioLib weights (softwares/DeepTMHMM/) -- same pattern
+    // as modules/local/deepcoil2, phobius, deeploc2 and signalp6. Needs
+    // `-profile docker` and softwares/DeepTMHMM/ populated per docs/software-setup.md.
+    test("Run deeptmhmm - R570 subsample (see tests/testdata/README.md)") {
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ], // meta
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/DeepTMHMM/DeepTMHMM-Academic-License-v1.0", checkIfExists: true)
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def results = process.out.predictions[0][1]
+            assert results.size() > 0
+
+            // SoffiXsponR570.7os1g005900.1.p is a known transmembrane positive
+            // (softwares/DeepTMHMM/.../results_r570/TMRs.gff3, 3 predicted TMRs -- see
+            // tests/testdata/README.md). Assert at least one TMhelix region is predicted
+            // for it, not an exact count: the precise number of TMRs (e.g. 3 vs 4) can
+            // shift by one at borderline boundaries depending on batch composition/hardware
+            // (confirmed while building this test set -- see PLAN.md Stage 5 notes).
+            def gff3 = results.find { it.toString().endsWith('.gff3') }
+            assert gff3 != null
+            def gff3_lines = file(gff3).readLines()
+            def tm_block_start = gff3_lines.findIndexOf { it.contains('SoffiXsponR570.7os1g005900.1.p Length') }
+            assert tm_block_start >= 0
+            def tm_block = gff3_lines[tm_block_start..(tm_block_start + 10)]
+            assert tm_block.any { it.contains('TMhelix') }
+
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}

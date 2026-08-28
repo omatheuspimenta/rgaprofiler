@@ -1,0 +1,61 @@
+feature	accession	n_hits	status
+(watch only)	IPR007111	0	InterPro: NACHT nucleoside triphosphatase -- see PF05729 above.
+(watch only)	PF05729	0	Pfam: NACHT domain. Reported, never used as NB-ARC evidence: NACHT is a distinct NTPase domain (InterPro keeps IPR007111 NACHT separate from IPR002182 NB-ARC). 0 hits in R570; relevant for fungal and animal proteomes, where NACHT NLRs are the norm.
+(watch only)	PTHR33463	0	PANTHER: NB-ARC DOMAIN-CONTAINING PROTEIN-RELATED (family-level, not used as NB-ARC evidence)
+(watch only)	PTHR36766	0	PANTHER: PLANT BROAD-SPECTRUM MILDEW RESISTANCE PROTEIN RPW8 (family-level, not used as RPW8 evidence). In R570 it hits 1273 of the 4023 NB-ARC proteins: using it as RPW8 evidence would inflate RNL from 7 to ~1273.
+CC	Coil	7	used
+CC (domain channel)	IPR041118	1	used
+CC (domain channel)	PF18052	1	used
+LRR	G3DSA:3.80.10.10	1	used
+LRR	IPR001611	0	seeded but unused
+LRR	IPR003591	0	seeded but unused
+LRR	IPR006553	0	seeded but unused
+LRR	IPR013210	0	seeded but unused
+LRR	IPR032675	1	used
+LRR	IPR055414	1	used
+LRR	IPR057135	0	seeded but unused
+LRR	PF00560	0	seeded but unused
+LRR	PF07723	0	seeded but unused
+LRR	PF07725	0	seeded but unused
+LRR	PF08263	0	seeded but unused
+LRR	PF12799	0	seeded but unused
+LRR	PF13306	0	seeded but unused
+LRR	PF13516	0	seeded but unused
+LRR	PF13855	0	seeded but unused
+LRR	PF14580	0	seeded but unused
+LRR	PF23247	0	seeded but unused
+LRR	PF23598	1	used
+LRR	PR00019	0	seeded but unused
+LRR	PS51450	0	seeded but unused
+LRR	SM00364	0	seeded but unused
+LRR	SM00365	0	seeded but unused
+LRR	SM00367	0	seeded but unused
+LRR	SM00368	0	seeded but unused
+LRR	SM00369	0	seeded but unused
+LysM	G3DSA:3.10.350.10	0	seeded but unused
+LysM	IPR018392	0	seeded but unused
+LysM	IPR036779	0	seeded but unused
+LysM	PF01476	0	seeded but unused
+LysM	SM00257	0	seeded but unused
+LysM	SSF54106	0	seeded but unused
+LysM	cd00118	0	seeded but unused
+NB-ARC	IPR002182	2	used
+NB-ARC	PF00931	2	used
+RPW8	IPR008808	0	seeded but unused
+RPW8	PF05659	0	seeded but unused
+RPW8	PS51153	0	seeded but unused
+STTK	IPR000719	0	seeded but unused
+STTK	IPR001245	0	seeded but unused
+STTK	IPR011009	0	seeded but unused
+STTK	PF00069	0	seeded but unused
+STTK	PF07714	0	seeded but unused
+STTK	PS50011	0	seeded but unused
+STTK	SM00219	0	seeded but unused
+STTK	SM00220	0	seeded but unused
+TIR	IPR000157	0	seeded but unused
+TIR	IPR035897	0	seeded but unused
+TIR	PF01582	0	seeded but unused
+TIR	PF13676	0	seeded but unused
+TIR	PS50104	0	seeded but unused
+TIR	SM00255	0	seeded but unused
+TIR	SSF52200	0	seeded but unused

@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: signalp6
+description: Predict signal peptides in protein sequences with SignalP 6.0
+keywords:
+  - signal peptide
+  - protein structure
+  - deep learning
+tools:
+  - signalp6:
+      description: |
+        SignalP 6.0 predicts the presence and location of signal peptide cleavage
+        sites in amino acid sequences, distinguishing between five different types
+        of signal peptides.
+      homepage: https://services.healthtech.dtu.dk/services/SignalP-6.0/
+      documentation: https://services.healthtech.dtu.dk/services/SignalP-6.0/
+      doi: 10.1038/s41587-021-01156-3
+      licence: ["DTU Health Tech academic-use license"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Input protein FASTA file
+        pattern: "*.{fa,fasta}"
+  - - signalp6_models:
+        type: directory
+        description: |
+          DTU-distributed SignalP6 model weights directory (softwares_dir/SignalP6/signalp-6-package/models);
+          license-gated, supplied by the user, validated by bin/check_software_present.sh signalp6.
+output:
+  predictions:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - results/*:
+          type: file
+          description: |
+            Summary prediction outputs (per-protein prediction table, GFF3 of signal
+            peptide regions, JSON summary) -- see SignalP6's own README for format details.
+          pattern: "results/*"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

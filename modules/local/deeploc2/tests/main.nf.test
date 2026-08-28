@@ -1,0 +1,45 @@
+nextflow_process {
+    name "Test Process DEEPLOC2"
+    script "../main.nf"
+    process "DEEPLOC2"
+
+    // Functional test against the real 'deeploc2:baseline' image and real,
+    // user-supplied DTU/ESM1b weights (softwares/DeepLoc2/) -- same pattern as
+    // modules/local/deepcoil2 and modules/local/phobius. Needs `-profile docker`
+    // and softwares/DeepLoc2/ populated per docs/software-setup.md; not runnable
+    // in a bare CI environment without those, same caveat as the other two.
+    test("Run deeploc2 - R570 subsample (see tests/testdata/README.md)") {
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ], // meta
+                    file("\${projectDir}/tests/testdata/r570_subsample.fasta", checkIfExists: true)
+                ]
+                input[1] = file("\${projectDir}/softwares/DeepLoc2/DeepLoc2/models", checkIfExists: true)
+                input[2] = file("\${projectDir}/softwares/DeepLoc2/torch_cache", checkIfExists: true)
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            // One combined results_<timestamp>.csv-renamed file for all 4 sequences -- a
+            // single-file glob match comes through as a bare Path, not a List, so don't
+            // assume/assert list-style .size().
+            def results_csv = process.out.predictions[0][1]
+            assert file(results_csv).exists()
+
+            // SoffiXsponR570.7os1g018900.1.p is a known Extracellular/signal-peptide positive
+            // (softwares/DeepLoc2/r570/results_*.csv, see tests/testdata/README.md) -- assert
+            // the discrete predicted class, not exact probabilities (these drift ~0.1-0.3%
+            // between runs/hardware for this neural net, per Stage 4a's validation).
+            def csv_lines = file(results_csv).readLines()
+            def sp_line = csv_lines.find { it.startsWith('SoffiXsponR570.7os1g018900.1.p,') }
+            assert sp_line != null
+            assert sp_line.startsWith('SoffiXsponR570.7os1g018900.1.p,Extracellular,')
+
+            assert snapshot(process.out.versions).match()
+        }
+    }
+}

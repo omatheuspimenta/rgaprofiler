@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: deeploc2
+description: Predict subcellular localization(s) and membrane protein type(s) of proteins with DeepLoc 2.1
+keywords:
+  - subcellular localization
+  - membrane protein
+  - protein language model
+  - deep learning
+tools:
+  - deeploc2:
+      description: |
+        Multi-label prediction of eukaryotic protein subcellular localization and
+        membrane association using protein language models (ESM1b / ProtT5).
+      homepage: https://services.healthtech.dtu.dk/services/DeepLoc-2.1/
+      documentation: https://services.healthtech.dtu.dk/services/DeepLoc-2.1/
+      doi: 10.1093/nar/gkae237
+      licence: ["DTU Health Tech academic-use license"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Input protein FASTA file
+        pattern: "*.{fa,fasta}"
+  - - deeploc2_models:
+        type: directory
+        description: |
+          DTU-distributed DeepLoc2 model checkpoints directory (softwares_dir/DeepLoc2/DeepLoc2/models);
+          license-gated, supplied by the user, validated by bin/check_software_present.sh deeploc2.
+  - - torch_cache:
+        type: directory
+        description: |
+          $TORCH_HOME-shaped cache directory holding the ESM1b base encoder weights
+          (softwares_dir/DeepLoc2/torch_cache/hub/checkpoints/); too large to bake
+          into the image, supplied by the user.
+output:
+  predictions:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - results/*.csv:
+          type: file
+          description: Per-protein localization/signal/membrane-type predictions (DeepLoc2's native CSV format)
+          pattern: "results/*.csv"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

@@ -1,0 +1,14 @@
+{
+    "Run rga_classify - R570 subsample, real six-tool outputs": {
+        "content": [
+            [
+                "versions.yml:md5,61aca3e24dbd492e13bc5cf0b74d8011"
+            ]
+        ],
+        "timestamp": "2026-08-28T11:51:31.092225426",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

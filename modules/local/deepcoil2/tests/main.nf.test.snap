@@ -1,11 +1,11 @@
 {
-    "Run deepcoil2 - input one chunk and run": {
+    "Run deepcoil2 - R570 subsample (see tests/testdata/README.md)": {
         "content": [
             [
                 "versions.yml:md5,9a737893954b645d8eea5e875e3d1c00"
             ]
         ],
-        "timestamp": "2026-08-07T22:48:43.832550013",
+        "timestamp": "2026-08-28T10:54:15.431013231",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

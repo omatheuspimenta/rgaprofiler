@@ -1,0 +1,108 @@
+{
+    "-profile test": {
+        "content": [
+            {
+                "DEEPCOIL2": {
+                    "deepcoil": "2.0.1"
+                },
+                "DEEPLOC2": {
+                    "deeploc2": "1.0.0"
+                },
+                "DEEPTMHMM": {
+                    "deeptmhmm": 1.0
+                },
+                "FASTA_QC": {
+                    "seqkit": "v2.13.0"
+                },
+                "INTERPROSCAN": {
+                    "interproscan": "5.78-109.0"
+                },
+                "PHOBIUS": {
+                    "phobius": 1.01
+                },
+                "RGA_CLASSIFY": {
+                    "rga_classify": "0.0.1"
+                },
+                "RGA_REPORT": {
+                    "pandas": "3.0.5"
+                },
+                "SIGNALP6": {
+                    "signalp6": "6.0h"
+                },
+                "Workflow": {
+                    "omatheuspimenta/rgaprofiler": "v1.0.0dev"
+                }
+            },
+            [
+                "deepcoil2",
+                "deepcoil2/results",
+                "deepcoil2/results/SoffiXsponR57009Cg1012001p.out",
+                "deepcoil2/results/SoffiXsponR57010Eg0221001p.out",
+                "deepcoil2/results/SoffiXsponR5707os1g0059001p.out",
+                "deepcoil2/results/SoffiXsponR5707os1g0189001p.out",
+                "deeploc2",
+                "deeploc2/results",
+                "deeploc2/results/r570_subsample_deeploc2.csv",
+                "deeptmhmm",
+                "deeptmhmm/results",
+                "deeptmhmm/results/deeptmhmm_results.md",
+                "deeptmhmm/results/embeddings",
+                "deeptmhmm/results/embeddings/12b46762e2f9c045126a3b7b0de6f981",
+                "deeptmhmm/results/embeddings/3f5597f4d4931910925d40bd5e73f88a",
+                "deeptmhmm/results/embeddings/e55c0d3d9030bc431a124d009cd14bc0",
+                "deeptmhmm/results/embeddings/f0537e5673699070c1ee64994cdeb9c6",
+                "deeptmhmm/results/probabilities",
+                "deeptmhmm/results/r570_subsample_deeptmhmm.gff3",
+                "deeptmhmm/results/r570_subsample_predicted_topologies.3line",
+                "fasta",
+                "fasta/r570_subsample_clean.fasta",
+                "fasta/r570_subsample_clean_chunks",
+                "fasta/r570_subsample_clean_chunks/r570_subsample_clean.part_001.fasta.fasta",
+                "interproscan",
+                "interproscan/r570_subsample_interpro.tsv",
+                "phobius",
+                "phobius/r570_subsample_phobius.tsv",
+                "pipeline_info",
+                "pipeline_info/rgaprofiler_software_versions.yml",
+                "rga",
+                "rga/rga_out",
+                "rga/rga_out/accession_audit.tsv",
+                "rga/rga_out/cache",
+                "rga/rga_out/cache/deepcoil_raw_segments.tsv",
+                "rga/rga_out/cc_policy_sensitivity.tsv",
+                "rga/rga_out/cc_segment_sensitivity.tsv",
+                "rga/rga_out/logs",
+                "rga/rga_out/logs/run.log",
+                "rga/rga_out/report.html",
+                "rga/rga_out/report.md",
+                "rga/rga_out/rga_domain_evidence_long.tsv",
+                "rga/rga_out/rga_predictions.tsv",
+                "rga/rga_out/rga_predictions_by_locus.tsv",
+                "rga/rga_out/rga_predictions_rga_only.tsv",
+                "rga/rga_out/rga_summary_counts.tsv",
+                "rga/rga_out/run_metadata.json",
+                "rga/rga_out/unmatched_ids_report.tsv",
+                "signalp6",
+                "signalp6/results",
+                "signalp6/results/output.json",
+                "signalp6/results/processed_entries.fasta",
+                "signalp6/results/r570_subsample_signalp6.gff3",
+                "signalp6/results/r570_subsample_signalp6_predictions.txt",
+                "signalp6/results/region_output.gff3",
+                "summary_report",
+                "summary_report/report_out",
+                "summary_report/report_out/report.html"
+            ],
+            [
+                "r570_subsample_clean.fasta:md5,f080cc031e65cbe0261d37c5a6086a4a",
+                "r570_subsample_clean.part_001.fasta.fasta:md5,f080cc031e65cbe0261d37c5a6086a4a",
+                "r570_subsample_phobius.tsv:md5,24a82656589aaf4398282db15a33617c"
+            ]
+        ],
+        "timestamp": "2026-08-28T14:20:19.377288828",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

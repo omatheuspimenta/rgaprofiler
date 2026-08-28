@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# Script to take a .pt TorchScript model checkpoint and
+# replace calls to cpu with cuda.
+# This is not officially supported, but works for 
+# the SignalP6 checkpoints.
+
+# NOTE the name of the directory that will be created when unzipping a checkpoint is the name of the .pt checkpoint at time of saving.
+# --> Need to maintain the same name to not break when calling conversions repeatedly.
+
+#SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # this does not work when installing via setup.y
+# https://chris-lamb.co.uk/posts/locating-source-any-python-module
+# Let's just hope this never breaks.
+SIGNALP_DIR=$(python3 -c "import os.path as _, "signalp"; print(_.dirname(_.realpath("signalp".__file__[:-1])))" )
+
+
+
+# if a second argument is provided, cd to there. else cd to the default dir.
+if [[ $# -ne 1 ]]; then
+    cd $2
+else
+    cd $SIGNALP_DIR
+    cd model_weights/
+fi
+
+echo $(pwd)
+
+if [ $1 = "gpu" ]; then
+    TARGET='cuda'
+    SOURCE='cpu'
+    echo "Converting to GPU."
+else
+    TARGET='cpu'
+    SOURCE='cuda'
+    echo "Converting to CPU."
+fi
+
+
+# Repack the distilled model.
+FILE=distilled_model_signalp6.pt
+if test -f "$FILE"; then
+    echo "Converting $FILE ."
+
+    #this makes a directory called distilled_scripted
+    unzip -q $FILE 
+
+    # Substitute in directory.
+    perl -pi -e "s/$SOURCE/${TARGET}/g" `find ./distilled_scripted/ -name *.py`
+    zip -r -q distilled_scripted.pt  distilled_scripted/ # Repackage directory to .pt
+    rm -rf distilled_scripted #remove unzipped directory
+    if python3 $SIGNALP_DIR/conversion_utils/move_checkpoint_to_device.py distilled_scripted.pt $TARGET ; then
+        mv distilled_scripted.pt $FILE #if gpu moving worked, rename and replace.
+        echo "Converted $FILE."
+    else
+        echo "Conversion of $FILE failed."
+        rm -rf distilled_scripted.pt
+    fi
+fi
+
+# Repack the sequential models.
+DIR=sequential_models_signalp6
+if [ -d "$DIR" ]; then
+    for FILE in 'test_0_val_1' 'test_0_val_2' 'test_1_val_0' 'test_1_val_2' 'test_2_val_0' 'test_2_val_1' 'averaged_viterbi'
+        do
+            echo "Converting $FILE.pt ."
+
+            unzip -q $DIR/$FILE.pt 
+
+            perl -pi -e "s/${SOURCE}/${TARGET}/g" `find ./$FILE/ -name *.py`
+            
+            zip -r -q $FILE.pt  $FILE/
+            rm -rf $FILE
+            if python3 $SIGNALP_DIR/conversion_utils/move_checkpoint_to_device.py $FILE.pt $TARGET ; then
+                mv $FILE.pt $DIR/$FILE.pt
+                echo "Converted $FILE.pt."
+            else
+                echo "Conversion of $FILE.pt failed."
+                rm $FILE.pt
+            fi
+
+        done
+fi
+
+# Repack the parallel model
+FILE=ensemble_model_signalp6.pt
+if test -f "$FILE"; then
+    echo "Converting $FILE ."
+
+    #this makes a directory called ensemble_scripted
+    unzip -q $FILE 
+
+    # Substitute in directory.
+    perl -pi -e "s/$SOURCE/${TARGET}/g" `find ./ensemble_scripted/ -name *.py`
+    zip -r -q ensemble_scripted.pt  ensemble_scripted/ # Repackage directory to .pt
+    rm -rf ensemble_scripted #remove unzipped directory
+    if python3 $SIGNALP_DIR/conversion_utils/move_checkpoint_to_device.py ensemble_scripted.pt $TARGET ; then
+        mv ensemble_scripted.pt $FILE #if gpu moving worked, rename and replace.
+        echo "Converted $FILE."
+    else
+        echo "Conversion of $FILE failed."
+        rm -rf ensemble_scripted.pt
+    fi
+fi
+

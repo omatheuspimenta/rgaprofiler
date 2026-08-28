@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: rga_report
+description: Render a lightweight, self-contained HTML summary report for one sample's pipeline run
+keywords:
+  - report
+  - summary
+  - html
+tools:
+  - rga_report:
+      description: |
+        Pipeline-authored (bin/rga_report.py, not vendored) custom summary report used
+        instead of MultiQC (see PLAN.md decision #3): reads rga_classify's harmonised
+        rga_predictions.tsv/rga_summary_counts.tsv and the pipeline's collated software
+        versions, and writes one self-contained HTML page (RGA family/subclass counts,
+        per-tool contribution summary, links to detailed per-tool outputs, versions table).
+      homepage: ""
+      documentation: ""
+      doi: ""
+      licence: []
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - rga_predictions_tsv:
+        type: file
+        description: rga_predictions.tsv from rga_classify
+    - rga_summary_tsv:
+        type: file
+        description: rga_summary_counts.tsv from rga_classify
+    - versions_yml:
+        type: file
+        description: Collated software_versions.yml covering FASTA_QC, the six tools, and rga_classify
+output:
+  report:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - report_out/*:
+          type: file
+          description: |
+            report.html -- a single, self-contained page (no external CSS/JS/CDN). Published
+            to ${params.outdir}/summary_report/ via the withName override in conf/modules.config.
+          pattern: "report_out/*"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

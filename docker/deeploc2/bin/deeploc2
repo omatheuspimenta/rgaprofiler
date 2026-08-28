@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+# Thin CLI shim for the vendored DeepLoc2 package (see docker/deeploc2/src/DeepLoc2/).
+# We don't `pip install` DeepLoc2 itself (its setup.py's install/develop hooks
+# auto-download the ESM1b weights, and its package_data would bake DTU's
+# licensed model checkpoints into this image) -- so there's no console_scripts
+# entry point. This calls the same predict() function DeepLoc2's own
+# 'deeploc2' console script would.
+from DeepLoc2.deeploc2 import predict
+
+if __name__ == "__main__":
+    predict()

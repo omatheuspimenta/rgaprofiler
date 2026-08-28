@@ -1,0 +1,738 @@
+# =============================================================================
+# RGA prediction pipeline -- master configuration
+# =============================================================================
+# Everything that is organism-, database- or threshold-specific lives here.
+# The Python code contains NO accessions and NO magic numbers.
+#
+# To adapt the pipeline to another organism you should only ever need to edit
+# this file (see docs/rga/README.md, section "How to adapt to another organism").
+# =============================================================================
+
+config_version: "0.0.1"
+
+# -----------------------------------------------------------------------------
+# Protein identifier handling
+# -----------------------------------------------------------------------------
+# Tools mangle protein IDs differently. Each rule below is applied, in order,
+# to the raw ID emitted by a tool in order to recover the canonical ID.
+#
+#   strip_after_whitespace : keep only the first whitespace-delimited token
+#                            (SignalP 6.0 echoes the whole FASTA header)
+#   strip_dots             : remove every "." from the ID
+#                            (DeepCoil2 sanitises file names this way)
+#   strip_after_pipe       : keep only the text before the first "|"
+#   rstrip_suffixes        : remove any of `id_suffixes` from the end
+#
+# `canonical_form` says which normalisation must be applied to the *canonical*
+# IDs in order to compare them with a tool's IDs. This is how DeepCoil files
+# (dots removed) are mapped back onto canonical IDs: we build a lookup
+# {strip_dots(canonical_id) -> canonical_id}. This is only safe if the mapping
+# is injective; the pipeline asserts that and aborts if it is not.
+ids:
+  id_suffixes: []          # e.g. [".p1", ".1"] for TransDecoder output
+  per_tool:
+    interproscan: [strip_after_whitespace]
+    phobius:      [strip_after_whitespace]
+    deeptmhmm:    [strip_after_whitespace]
+    signalp:      [strip_after_whitespace]
+    deeploc:      [strip_after_whitespace]
+    deepcoil:     [strip_after_whitespace]
+  # Normalisation used to reconcile a tool whose IDs cannot be recovered by
+  # simple stripping (DeepCoil2). `null` disables the fallback lookup.
+  deepcoil_canonical_form: strip_dots
+
+  # Regex capturing the locus (gene) identifier from a protein ID, used only
+  # for the optional locus-level summary. Group 1 is the locus.
+  # R570 protein IDs look like  SoffiXsponR570.7os1g018900.1.p
+  # -> locus                    SoffiXsponR570.7os1g018900
+  locus_regex: '^(.*?)\.\d+\.p$'
+
+# Glob patterns used to locate each tool's output under --input-dir. The first
+# pattern that matches wins; explicit --<tool> command-line paths override this
+# entirely. Edit these if your directory layout differs.
+input_discovery:
+  interproscan:
+    - "InterProScan/*.tsv"
+    - "interproscan/*.tsv"
+    - "*interpro*.tsv"
+  phobius:
+    - "phobius/*.phobius"
+    - "Phobius/*.phobius"
+    - "*.phobius"
+  deeptmhmm:
+    - "DeepTMHMM/TMRs.gff3"
+    - "DeepTMHMM/*.gff3"
+    - "deeptmhmm/*.gff3"
+  signalp:
+    - "SignalP6/prediction_results.txt"
+    - "SignalP*/prediction_results.txt"
+    - "signalp*/prediction_results.txt"
+  deeploc:
+    - "DeepLoc2/results*.csv"
+    - "DeepLoc*/results*.csv"
+    - "deeploc*/results*.csv"
+  deepcoil:
+    - "DeepCoil"
+    - "DeepCoil2"
+    - "deepcoil"
+
+# -----------------------------------------------------------------------------
+# Controlled feature vocabulary
+# -----------------------------------------------------------------------------
+# Every feature the rule engine may reference. Order is the canonical display
+# order used when a feature has no coordinates.
+features:
+  - NB-ARC
+  - TIR
+  - RPW8
+  - CC
+  - LRR
+  - STTK
+  - LysM
+  - TM
+  - SP
+
+# Features that count as evidence of an immune-related protein. A protein with
+# none of these is Non-RGA; a protein with at least one but matching no
+# specific rule falls through to "Other".
+#
+# NOTE: CC is deliberately NOT in this list, which sits between the two filters
+# Rody et al. (2019) apply. Their published filter is stricter -- "Only sequences
+# harboring at least one out of three RGA basic domains - LRR, NB-ARC, or NB-LRR
+# - were kept" -- while their script's working universe is broader, admitting any
+# protein with an LRR, NB-ARC, TIR, kinase, CC or TM hit. A lone coiled coil is a
+# generic structural motif present in tens of thousands of proteins (42,300 in
+# R570 by InterProScan Coils alone) and is not, by itself, evidence of an immune
+# receptor. Excluding it keeps the classes Rody et al. define that their
+# published filter would drop (TM-CC in particular) without letting CC stand
+# alone as immune evidence. To restore the script's working universe, add `CC`
+# to this list.
+core_immune_features:
+  - NB-ARC
+  - TIR
+  - RPW8
+  - LRR
+  - STTK
+  - LysM
+
+# Ectodomain features used to sub-classify RLK/RLP. Extend this list (and add
+# the accessions above) if your organism has other relevant ectodomains.
+ectodomain_features:
+  - LRR
+  - LysM
+
+# -----------------------------------------------------------------------------
+# InterProScan accession -> feature mapping
+# -----------------------------------------------------------------------------
+# Matching is done on ACCESSIONS ONLY (signature accession, column 5, and
+# InterPro accession, column 12). Description-string matching is never used:
+# it is version-dependent and produces false positives such as
+# "Coiled coil-helix-coiled coil-helix (CHCH) domain" matching /coil/.
+#
+# `observed` / `not_observed_in_R570` comments record the audit performed on
+# the R570 InterProScan run of 09-08-2026 (3,180,078 rows). Accessions kept but
+# unobserved are harmless; the pipeline reports them under "seeded but unused".
+interproscan_features:
+
+  NB-ARC:
+    - PF00931        # Pfam,  NB-ARC domain                        (4369 hits)
+    - IPR002182      # InterPro, NB-ARC                            (4369 hits)
+    # PF05729 / IPR007111 (NACHT) were listed here until config v0.0.1 and have
+    # been moved to `watch_accessions`. NACHT is a distinct NTPase domain, not
+    # a synonym for NB-ARC: InterPro keeps them as separate domain entries
+    # (IPR002182 NB-ARC vs IPR007111 NACHT nucleoside triphosphatase), and this
+    # file already said as much in the now-removed `nacht_accessions` key while
+    # simultaneously using PF05729 as NB-ARC evidence. Both hit 0 proteins in
+    # R570, so nothing in the reference run changes -- but in a fungal or animal
+    # proteome, where NACHT NLRs are the norm, the old entry would silently have
+    # reported NACHT proteins as carrying NB-ARC.
+
+  TIR:
+    - PF01582        # Pfam,  TIR domain                             (15)
+    - PF13676        # Pfam,  TIR domain (divergent)                 (16)
+    - SM00255        # SMART, till_3                                 (15)
+    - IPR000157      # InterPro, TIR domain                          (99)
+    - PS50104        # PROSITE profile, TIR domain profile           (53)  
+    - SSF52200       # SUPERFAMILY, Toll/Interleukin receptor TIR    (51)  
+    - IPR035897      # InterPro, TIR domain superfamily              (53)  
+
+  RPW8:
+    # PF05659 (Pfam RPW8) is ABSENT from the R570 run; the only domain-level
+    # RPW8 evidence is the PROSITE profile. PANTHER PTHR36766
+    # ("PLANT BROAD-SPECTRUM MILDEW RESISTANCE PROTEIN RPW8", 1378 hits) is a
+    # family-level assignment, not a domain hit, and is deliberately NOT used
+    # here -- see `watch_accessions` below, where it is merely reported.
+    - PF05659        # Pfam,  RPW8 -- not observed in R570
+    - PS51153        # PROSITE profile, RPW8 domain profile           (7)
+    - IPR008808      # InterPro, RPW8 domain                          (7)
+
+  LRR:
+    - PF00560        # Pfam,  Leucine Rich Repeat                 (14738)
+    - PF07723        # Pfam,  LRR_2  -- not observed in R570
+    - PF07725        # Pfam,  LRR_3  -- not observed in R570
+    - PF12799        # Pfam,  LRR_4                                 (303)
+    - PF13306        # Pfam,  LRR_5                                  (31)
+    - PF13516        # Pfam,  LRR_6                                 (644)
+    - PF13855        # Pfam,  LRR_8                                (4400)
+    - PF14580        # Pfam,  LRR_9                                  (23)
+    - SM00365        # SMART, LRR_SD22                             (1868)
+    - SM00369        # SMART, LRR_typ_2                           (18431)
+    # SM00370 was listed here until config v0.0.1. It is a *retired* accession:
+    # SMART deleted it on 2011-11-22 (the InterPro API answers HTTP 410 for it),
+    # so it could never have fired. Its live siblings were missing instead, and
+    # are added below.
+    - SM00364        # SMART, LRR_bac_2  -- LRR, bacterial type       (78)
+    - SM00368        # SMART, LRR_RI_2   -- LRR, ribonuclease-inhibitor type (134)
+    - IPR001611      # InterPro, Leucine-rich repeat              (22104)
+    - IPR003591      # InterPro, LRR, typical subtype             (18431)
+    - IPR032675      # InterPro, LRR domain superfamily           (21512)
+    - PF23598        # Pfam,  Leucine-rich repeat region           (4482)
+    - IPR055414      # InterPro, LRR region                        (4482)
+    - SM00367        # SMART, LRR_CC_2 (cysteine-containing LRR)   (4175)
+    - IPR006553      # InterPro, LRR, cysteine-containing subtype  (4175)
+    - PF08263        # Pfam,  LRRNT_2, LRR N-terminal domain       (2596)
+    - IPR013210      # InterPro, LRR-containing N-terminal, type 2 (2596)
+    - PS51450        # PROSITE profile, LRR profile                (2322)
+    - PR00019        # PRINTS, Leucine-rich repeat signature       (2956)
+    - PF23247        # Pfam,  RPS2-like LRR                         (336)
+    - IPR057135      # InterPro, RPS2-like LRR                      (336)
+    - G3DSA:3.80.10.10   # Gene3D, Ribonuclease inhibitor / LRR   (21512)
+
+  STTK:
+    - PF00069        # Pfam,  Protein kinase domain                (9304)
+    - PF07714        # Pfam,  Protein tyrosine/Ser-Thr kinase      (6744)
+    - SM00220        # SMART, S_TKc                               (12583)
+    - SM00219        # SMART, TyrKc                                 (238)
+    - PS50011        # PROSITE profile, Protein kinase domain     (15857)
+    - IPR000719      # InterPro, Protein kinase domain            (37744)
+    - IPR001245      # InterPro, Ser/Thr & Tyr kinase, catalytic   (9627)
+    - IPR011009      # InterPro, Protein kinase-like domain       (16725)
+
+  LysM:
+    - PF01476        # Pfam,  LysM domain                           (159)
+    - SM00257        # SMART, LysM_2                                (178)
+    - IPR018392      # InterPro, LysM domain                        (657)
+    - cd00118        # CDD, LysM                                    (141)
+    - SSF54106       # SUPERFAMILY, LysM domain                     (119)
+    - IPR036779      # InterPro, LysM domain superfamily            (189)
+    - G3DSA:3.10.350.10  # Gene3D, LysM domain                      (189)
+
+  # Coiled coil from InterProScan is SECONDARY evidence only. DeepCoil2 is the
+  # primary channel (see `coiled_coil` below). MobiDBLite must never appear.
+  # This list is the *secondary*, predictor-based CC channel only (the 1991
+  # Lupas algorithm as shipped in InterProScan). The domain-level CC channel
+  # lives in `cc_domain_accessions` below and is deliberately kept separate so
+  # that `cc_coils` keeps its documented meaning.
+  CC:
+    - Coil           # analysis "Coils", signature accession "Coil"  (42300 proteins)
+
+# Analyses that are never allowed to contribute feature evidence, whatever
+# accession they carry.
+excluded_analyses:
+  - MobiDBLite
+  - AntiFam
+
+# Domain-level coiled-coil evidence: the third CC channel.
+#
+# `cc_deepcoil` and `cc_coils` are *biophysical propensity predictors*. Neither
+# publishes a recommended score cut-off (the DeepCoil README documents `cc` only
+# as "sharpened coiled coil propensity"; Ludwiczak et al. 2019 report AUC/ROC and
+# never name a default), and Simm et al. 2021, benchmarking coiled-coil
+# predictors against the whole PDB via SOCKET, found their agreement with
+# structure close to random (MCC 0.02 for NCOILS, 0.22 at best) with a 30-fold
+# spread in the number of coiled coils called.
+#
+# The accessions below are of a different kind: profile HMMs for a *named
+# domain*, with stable, curated, versioned identifiers the same epistemic
+# status as PF00931 for NB-ARC, on which every NLR call in this pipeline already
+# rests. Using them as CC evidence removes the inconsistency of classifying eight
+# features from curated domain models and the ninth from an unbenchmarked
+# propensity score.
+#
+# Measured on the R570 reference proteome (see docs/rga/README.md section 5.4):
+#   * 2611 of the 4023 NLRs carry PF18052;
+#   * 377 of the 479 DeepCoil2-positive NLRs (79%) also carry it, DeepCoil2 is
+#     overwhelmingly rediscovering this domain, at ~14% recall;
+#   * only 33 NLRs are DeepCoil2-positive with neither this domain nor Coils;
+#   * 2003 of the 3038 proteins previously called `NL` (66%) carry it, i.e. two
+#     thirds of that class were NLRs with a coiled coil reported as having none.
+#
+# Caveat, stated because it bounds the claim: PF18052 models the CC of Rx/Gpa2-
+# type CNLs. It is not "the" NLR coiled-coil domain, and the 1006 R570 NLRs
+# positive for none of the three channels stay CC-negative. CNL is a floor here
+# too, just a much higher one.
+cc_domain_accessions:
+  - PF18052        # Pfam:     Rx N-terminal domain          (2827 proteins, 2611 NLRs)
+  - IPR041118      # InterPro: Rx N-terminal domain (integrated entry for PF18052)
+
+# Analyses whose hits are collected for the integrated-domain scan. Restricting
+# this to true domain databases avoids family-level (PANTHER) noise.
+integrated_domain_analyses:
+  - Pfam
+
+# Features considered canonical for an NLR. Any domain from
+# `integrated_domain_analyses` that does NOT belong to one of these features is
+# reported as an integrated domain (the integrated-decoy model). Note that STTK
+# and LysM are deliberately absent: a kinase or a LysM fused to an NLR IS an
+# integrated domain, and must not be hidden just because the pipeline also uses
+# those accessions to recognise receptors.
+integrated_domain_canonical_features:
+  - NB-ARC
+  - TIR
+  - RPW8
+  - CC
+  - LRR
+
+# Accessions that belong to the canonical NLR architecture but are not used as
+# features, and must therefore NOT be reported as integrated domains. Without
+# this list the structural sub-domains of an ordinary NLR (the winged-helix
+# domain of the NB-ARC module, the Rx-type N-terminal coiled coil, the
+# family-specific LRR models) are flagged on nearly every NLR and the
+# integrated-domain column becomes meaningless.
+#
+# Verified against the R570 run: these are the Pfam entries whose descriptions
+# identify them as parts of a resistance protein rather than a fused domain.
+# Genuine integrated domains, WRKY (PF03106), BED zinc finger (PF02892),
+# heavy-metal-associated (PF00403), protein kinase (PF00069/PF07714), jacalin
+# (PF01419) and so on, are deliberately NOT listed here.
+integrated_domain_exclusions:
+  - PF23559        # Disease resistance protein Winged helix domain    (3407 on NLRs)
+  - PF25895        # Winged Helix Domain in plant disease resistance proteins (42)
+  - PF18052        # Rx N-terminal domain -- the CC module of Rx-type CNLs   (2611)
+  - PF25019        # R13L1/DRL21 LRRs                                       (1032)
+  - PF23622        # At1g61320/AtMIF1, LRR domain                             (29)
+  - PF23286        # Disease resistance protein RPS4B-like, LRRs                (5)
+  - PF25013        # Zer-1-like, leucine-rich repeats                          (1)
+
+# Accessions that are merely *reported* (counts in the run report) but never
+# used as evidence. Use this to keep an eye on family-level annotations.
+watch_accessions:
+  PTHR36766: "PANTHER: PLANT BROAD-SPECTRUM MILDEW RESISTANCE PROTEIN RPW8 (family-level, not used as RPW8 evidence). In R570 it hits 1273 of the 4023 NB-ARC proteins: using it as RPW8 evidence would inflate RNL from 7 to ~1273."
+  PTHR33463: "PANTHER: NB-ARC DOMAIN-CONTAINING PROTEIN-RELATED (family-level, not used as NB-ARC evidence)"
+  PF05729: "Pfam: NACHT domain. Reported, never used as NB-ARC evidence: NACHT is a distinct NTPase domain (InterPro keeps IPR007111 NACHT separate from IPR002182 NB-ARC). 0 hits in R570; relevant for fungal and animal proteomes, where NACHT NLRs are the norm."
+  IPR007111: "InterPro: NACHT nucleoside triphosphatase -- see PF05729 above."
+
+# -----------------------------------------------------------------------------
+# Domain-interval handling
+# -----------------------------------------------------------------------------
+# All tool coordinates used here are 1-based, inclusive:
+#   InterProScan TSV  : 1-based inclusive (columns 7,8)
+#   DeepTMHMM GFF3    : 1-based inclusive (columns 3,4)
+#   Phobius topology  : 1-based inclusive
+#   SignalP 6.0       : cleavage site "CS pos: 30-31" -> SP spans residues 1..30
+#   DeepCoil2 .out    : row i (after the header) is residue i, 1-based
+intervals:
+  # Two hits are merged when they overlap by at least this many residues.
+  merge_min_overlap: 1
+  # Minimum number of non-overlapping LRR intervals for the LRR feature to be
+  # called. Overridable with --min-lrr-copies.
+  #
+  # CAVEAT: `n_lrr` merges intervals from every LRR source, and region-level
+  # signatures (Gene3D G3DSA:3.80.10.10, SUPERFAMILY) span the whole LRR
+  # region, so a protein carrying a dozen LRR repeats usually collapses to a
+  # single merged interval. Raising this value above 1 is therefore a blunt
+  # filter. The companion column `n_lrr_repeats` counts merged intervals from
+  # repeat-level signatures only and is the biologically meaningful copy number.
+  min_lrr_copies: 1
+  # Analyses whose LRR hits describe individual repeats rather than the whole
+  # LRR region; used for `n_lrr_repeats`.
+  lrr_repeat_analyses: [Pfam, SMART, PRINTS, ProSitePatterns]
+
+# -----------------------------------------------------------------------------
+# Coiled coil (DeepCoil2 primary, InterProScan Coils secondary)
+# -----------------------------------------------------------------------------
+# DeepCoil2 writes one .out file per protein with columns
+#   aa  cc  raw_cc  prob_a  prob_d
+# `cc` is NOT a per-residue probability: DeepCoil2 has already performed peak
+# detection, so inside a candidate segment every residue carries the same
+# plateau value and outside it the value is exactly 0. Segment calling
+# therefore splits on a *change of value*, not only on zeros.
+#
+# Observed `cc` distribution over R570 part_001 (2,317,452 residues):
+#   max 0.922 | cc>0 6.22% | >=0.2 4.58% | >=0.5 2.43% | >=0.9 0.03%
+coiled_coil:
+  # threshold -- NOT a value recommended by DeepCoil2, because DeepCoil2
+  # recommends none. The tool documents `cc` as "sharpened coiled coil
+  # propensity" and the paper reports threshold-free metrics (AUC/ROC, F1). The
+  # only cut-off its authors state anywhere is the "very strict cut-off of 0.9"
+  # used to mine the human genome for high-confidence *novel* coiled coils,
+  # a discovery cut-off, not an annotation one: on R570 it leaves 476 CC-positive
+  # proteins in the whole proteome and CNL = 0 (the maximum plateau observed
+  # anywhere in R570 is 0.922). 0.5 is a deliberate midpoint choice by this
+  # pipeline, and it is documented as such rather than dressed up as a default.
+  #
+  # Raising it does not buy reliability. Scored against the Rx N-terminal domain
+  # as an independent reference, precision is flat while recall collapses:
+  #     0.4 -> 524 CNL, 82.8% precision, 18.6% recall
+  #     0.5 -> 396 CNL, 82.1% precision, 14.0% recall
+  #     0.6 -> 238 CNL, 84.0% precision,  8.6% recall
+  #     0.7 ->  76 CNL, 84.2% precision,  2.7% recall
+  # +2 points of precision for -81% of recall. And because classification is a
+  # total partition with no "unknown" bucket, every CNL lost this way is not an
+  # abstention -- it becomes a positive `NL` call, i.e. the error moves rather
+  # than shrinks.
+  threshold: 0.5
+  # min_length -- this one *is* grounded. Coiled coils shorter than three
+  # heptads are generally not stable, and Simm et al. 2021 evaluated every
+  # predictor against SOCKET/PDB under exactly two length cut-offs, 14 and 21
+  # residues, reporting improved performance at 21. 3 heptads = 21 residues.
+  # (28 = 4 heptads is measurably too strict here: CNL falls 396 -> 21, because
+  # the NLR CC segments DeepCoil2 calls in this proteome sit at 21-27 residues.)
+  min_length: 21
+  max_gap: 2               # merge two kept segments separated by <= N residues
+  # Sensitivity grid reported in report.html / README (never changes the calls)
+  sensitivity_thresholds: [0.2, 0.5]
+  sensitivity_min_lengths: [14, 21, 28]
+  # Fraction of a CC segment that must be covered by a TM helix before the
+  # segment is flagged as a possible TM artefact.
+  tm_overlap_fraction: 0.5
+
+# -----------------------------------------------------------------------------
+# Consensus policies (all overridable on the command line)
+# -----------------------------------------------------------------------------
+policies:
+  tm: union             # union | intersection | deeptmhmm | phobius
+  sp: signalp           # union | intersection | signalp   | phobius
+  # `union` over the three CC channels (rx_domain, deepcoil, coils). Changed
+  # from `deepcoil` in v1.1.0: see cc_domain_accessions above for the evidence.
+  cc: union             # rx_domain | deepcoil | coils | union | intersection
+
+signal_peptide:
+  # SignalP 6.0 classes that count as a signal peptide.
+  positive_predictions: [SP, LIPO, TAT, TATLIPO, PILIN]
+  # Additional probability floor applied on top of SignalP's own call.
+  # null = trust SignalP's argmax decision (recommended default).
+  min_probability: null
+
+transmembrane:
+  # A predicted TM helix whose span is covered by the signal-peptide region by
+  # at least this fraction is discarded: signal peptides are routinely
+  # mis-called as TM helices.
+  sp_overlap_fraction: 0.5
+  # Minimum number of surviving TM helices for the TM feature to be called.
+  min_helices: 1
+
+# -----------------------------------------------------------------------------
+# DeepLoc 2.0 -- supporting evidence only, never a classification criterion
+# -----------------------------------------------------------------------------
+deeploc:
+  # Localisations that support a membrane-anchored / secreted receptor.
+  membrane_localizations:
+    - Cell membrane
+    - Extracellular
+  # Localisations that are inconsistent with a cytoplasmic NLR (warning only).
+  nlr_inconsistent_localizations:
+    - Extracellular
+    - Cell membrane
+  # Localisations consistent with a cytoplasmic NLR.
+  nlr_consistent_localizations:
+    - Cytoplasm
+    - Nucleus
+
+# -----------------------------------------------------------------------------
+# Classification rules -- ORDERED and mutually exclusive
+# -----------------------------------------------------------------------------
+# Semantics of one rule:
+#   all_of  : every listed feature must be present
+#   none_of : no listed feature may be present
+#   any_of  : list of groups; every group must contribute at least one feature
+#   any_core: (fallback rules only) at least one core immune feature present
+#   no_core : (fallback rules only) no core immune feature present
+#
+# Rules 1-17 are written so that they are mutually exclusive INDEPENDENTLY of
+# their order; code/tests/test_rules.py proves this by enumerating all 2**9
+# feature combinations. Rules 18-19 are declared `fallback: true` and are
+# ordered catch-alls by construction.
+rules:
+
+  # ---- NLR / NBS-LRR family (requires NB-ARC) ----
+  - id: CNL
+    priority: 1
+    family: NLR
+    subclass: CNL
+    description: "Coiled-coil NLR: CC + NB-ARC + LRR"
+    all_of: [NB-ARC, CC, LRR]
+    none_of: [TIR, RPW8]
+
+  - id: TNL
+    priority: 2
+    family: NLR
+    subclass: TNL
+    description: "TIR NLR: TIR + NB-ARC + LRR"
+    all_of: [NB-ARC, TIR, LRR]
+    none_of: [RPW8]
+
+  - id: RNL
+    priority: 3
+    family: NLR
+    subclass: RNL
+    description: "Helper NLR (ADR1/NRG1 type): RPW8 + NB-ARC + LRR"
+    all_of: [NB-ARC, RPW8, LRR]
+    none_of: []
+
+  - id: NL
+    priority: 4
+    family: NLR
+    subclass: NL
+    description: "NB-ARC + LRR without an N-terminal CC/TIR/RPW8 domain"
+    all_of: [NB-ARC, LRR]
+    none_of: [CC, TIR, RPW8]
+
+  - id: CN
+    priority: 5
+    family: NLR
+    subclass: CN
+    description: "CC + NB-ARC, LRR not detected"
+    all_of: [NB-ARC, CC]
+    none_of: [LRR, TIR, RPW8]
+
+  - id: TN
+    priority: 6
+    family: NLR
+    subclass: TN
+    description: "TIR + NB-ARC, LRR not detected"
+    all_of: [NB-ARC, TIR]
+    none_of: [LRR, RPW8]
+
+  - id: RN
+    priority: 7
+    family: NLR
+    subclass: RN
+    description: "RPW8 + NB-ARC, LRR not detected"
+    all_of: [NB-ARC, RPW8]
+    none_of: [LRR]
+
+  - id: N
+    priority: 8
+    family: NLR
+    subclass: N
+    description: "NB-ARC only"
+    all_of: [NB-ARC]
+    none_of: [CC, TIR, RPW8, LRR]
+
+  # ---- NLR-associated / degenerate (no NB-ARC) ----
+  - id: TX
+    priority: 9
+    family: NLR-associated
+    subclass: TX
+    description: "TIR-X / TIR-only: TIR without NB-ARC and without LRR"
+    all_of: [TIR]
+    none_of: [NB-ARC, LRR]
+
+  - id: RX
+    priority: 10
+    family: NLR-associated
+    subclass: RX
+    description: "RPW8-X: RPW8 without NB-ARC"
+    all_of: [RPW8]
+    none_of: [NB-ARC, TIR]
+
+  # ---- Receptor-like kinases ----
+  - id: LRR-RLK
+    priority: 11
+    family: RLK
+    subclass: LRR-RLK
+    description: "Kinase + LRR ectodomain + (TM or SP), no NB-ARC"
+    all_of: [STTK, LRR]
+    any_of: [[TM, SP]]
+    none_of: [NB-ARC, TIR, RPW8]
+
+  - id: LysM-RLK
+    priority: 12
+    family: RLK
+    subclass: LysM-RLK
+    description: "Kinase + LysM ectodomain + (TM or SP), no NB-ARC"
+    all_of: [STTK, LysM]
+    any_of: [[TM, SP]]
+    none_of: [NB-ARC, TIR, RPW8, LRR]
+
+  # OPT-IN RULE, SHIPPED DISABLED -- priority 13 is deliberately left vacant.
+  #
+  # This is the one place where Rody et al. (2019) and RGAugury (Li et al.
+  # 2016) give conflicting rules, and the default resolves it for Rody:
+  #
+  #   Rody et al. 2019, Methods: RLK = "TM + LRR or NB-LRR + kinase domains".
+  #     An ectodomain is REQUIRED. A kinase with a membrane anchor but no
+  #     LRR/LysM is not an RLK there, and does not enter their RGA candidate
+  #     set at all. Here it still lands in `Other`, which is an RGA family.
+  #   RGAugury 2016: RLKs are called on kinase + anchor, and the ectodomain is
+  #     used only to sub-type them (LRR-RLK / LysM-RLK / other-receptor).
+  #
+  # Rody et al. is the method this pipeline reimplements, it is three years
+  # newer, and it is sugarcane-specific, so it supplies the default: only
+  # `LRR-RLK` and `LysM-RLK` exist, and an anchored kinase with no recognised
+  # ectodomain falls through to `Other` (priority 18). Note that this is a
+  # *scope* difference, not a detection one: `LRR-RLK` is the directly
+  # comparable number and agrees closely (1,757 loci here vs 1,721 in the
+  # legacy table).
+  #
+  # Uncomment the block below to get RGAugury scope instead. On R570 v2.1 that
+  # moves 5,527 proteins (3,422 loci) out of `Other` into a new `other-RLK`
+  # subclass. Nothing else needs changing: `confidence.classes_using_tm_sp`
+  # already lists `other-RLK`.
+  # - id: other-RLK
+  #   priority: 13
+  #   family: RLK
+  #   subclass: other-RLK
+  #   description: "Kinase + (TM or SP), no recognised ectodomain, no NB-ARC"
+  #   all_of: [STTK]
+  #   any_of: [[TM, SP]]
+  #   none_of: [NB-ARC, TIR, RPW8, LRR, LysM]
+
+  # ---- Receptor-like proteins ----
+  # NOTE (EXTENSION of Rody et al. 2019): the published RLP rule is
+  # "TM + LRR or NB-LRR or LysM". Two differences here.
+  #   1. SP is accepted as a membrane anchor alongside TM (`any_of`). Rody et
+  #      al. run Phobius, which predicts signal peptides, but never use a
+  #      signal peptide as a classification criterion; their rules reference TM
+  #      only. SP anchoring is therefore an EXTENSION, not a correction. It is
+  #      additive: it can only promote a protein into an RLK/RLP class, never
+  #      remove one. On R570 v2.1 it accounts for 315 of the 407 loci the
+  #      legacy table calls `Other` (LRR alone) and this pipeline calls
+  #      `LRR-RLP`. To restore the published TM-only rule, delete the
+  #      `any_of: [[TM, SP]]` line from the four RLK/RLP rules and add `TM` to
+  #      their `all_of` instead. See docs/rga/README.md section 6.4, which
+  #      tabulates this switch alongside the other method presets.
+  #   2. `NB-ARC` is excluded here. The published rule does not exclude it, so
+  #      a TM + LRR + NB-ARC protein without a kinase is an RLP there; here the
+  #      NLR rules (priority 1-8) claim it first. ~20 loci on R570 v2.1.
+  - id: LRR-RLP
+    priority: 14
+    family: RLP
+    subclass: LRR-RLP
+    description: "LRR ectodomain + (TM or SP), no kinase, no NB-ARC"
+    all_of: [LRR]
+    any_of: [[TM, SP]]
+    none_of: [NB-ARC, TIR, RPW8, STTK]
+
+  - id: LysM-RLP
+    priority: 15
+    family: RLP
+    subclass: LysM-RLP
+    description: "LysM ectodomain + (TM or SP), no kinase, no NB-ARC"
+    all_of: [LysM]
+    any_of: [[TM, SP]]
+    none_of: [NB-ARC, TIR, RPW8, STTK, LRR]
+
+  # `other-RLP` is unreachable with the default `ectodomain_features`
+  # ([LRR, LysM]) because both have their own rule above. It exists so that an
+  # organism-specific config which adds a third ectodomain feature gets an
+  # RLP subclass for free. It is reported with a count of 0 by design.
+  - id: other-RLP
+    priority: 16
+    family: RLP
+    subclass: other-RLP
+    description: "Non-LRR/non-LysM ectodomain + (TM or SP), no kinase, no NB-ARC"
+    all_of: []
+    any_of: [[TM, SP], ECTODOMAIN_FEATURES]
+    none_of: [NB-ARC, TIR, RPW8, STTK, LRR, LysM]
+
+  - id: TM-CC
+    priority: 17
+    family: TM-CC
+    subclass: TM-CC
+    description: "Transmembrane + coiled coil, no NB-ARC/kinase/LRR/LysM"
+    all_of: [TM, CC]
+    none_of: [NB-ARC, STTK, LRR, LysM, TIR, RPW8]
+
+  # ---- Ordered catch-alls ----
+  - id: Other
+    priority: 18
+    family: Other
+    subclass: Other
+    description: "Carries at least one core immune feature but fits no rule above"
+    fallback: true
+    any_core: true
+
+  # NOTE (scope difference from Rody et al. 2019, doi:10.1186/s12864-019-6207-y):
+  # this class has no counterpart in the legacy work and the two must not be
+  # compared directly. Two *different* filters are involved.
+  #
+  # (a) Paper, Methods: "Only sequences harboring at least one out of three RGA
+  #     basic domains - LRR, NB-ARC, or NB-LRR - were kept to assembly the RGA
+  #     candidates databases." So the published RGA databases are restricted to
+  #     LRR/NB-ARC/NB-LRR carriers; TM-only, CC-only and kinase-only proteins
+  #     are out of scope by design.
+  #
+  # (b) Legacy script, before that filter: `add2DB()` is reached only from
+  #     inside the guarded parser blocks, so a protein with no LRR / NB-ARC /
+  #     TIR / kinase / CC / TM hit at all never becomes a key in
+  #     `SequencesDomainsDB`, never reaches the classification loop, and is
+  #     absent from the intermediate coordinates table entirely. That table's
+  #     "Non-RGA" label therefore means "had some feature, but no RGA-defining
+  #     one", over a universe already restricted to proteins with >= 1 hit.
+  #
+  # This pipeline classifies the whole input proteome, so "Non-RGA" here means
+  # "no core immune feature", over the full universe. Measured on R570 v2.1:
+  # the legacy coordinates table holds 77,884 rows (67,901 "Non-RGA") against
+  # 299,732 proteins / 194,593 loci scored here. Counts and percentages of
+  # Non-RGA are consequently not comparable between the two, and neither are
+  # any percent-of-proteome figures derived from them. Compare RGA classes
+  # only, and restrict to the shared gene set when doing so.
+  - id: Non-RGA
+    priority: 19
+    family: Non-RGA
+    subclass: "NA"
+    description: "No core immune feature detected"
+    fallback: true
+    no_core: true
+
+# Families whose members are reported as RGAs (is_rga = True).
+rga_families: [NLR, NLR-associated, RLK, RLP, TM-CC, Other]
+
+# -----------------------------------------------------------------------------
+# Confidence
+# -----------------------------------------------------------------------------
+# Every protein starts at `high` and is downgraded one level per triggered
+# demotion, floored at `low`. Rules are evaluated in the order given; each may
+# fire at most once. See docs/rga/README.md for the full rationale.
+confidence:
+  levels: [low, medium, high]
+  default: high
+  demotions:
+    # The CC evidence hierarchy, strongest first. A call backed by the
+    # domain-level Rx channel is never demoted for its CC: a curated profile HMM
+    # with a stable accession is the same grade of evidence as PF00931 for
+    # NB-ARC. The predictor-only demotions below therefore all carry
+    # `cc_rx_domain: false` -- they describe what to do when no domain model
+    # supports the call and we are relying on a propensity score alone.
+    - id: cc_deepcoil_only
+      description: "CC-dependent call supported by DeepCoil2 alone: no CC domain model and no InterProScan Coils agreement"
+      when: {classes_using_cc: true, cc_rx_domain: false, cc_deepcoil: true, cc_coils: false}
+      steps: 1
+    - id: cc_coils_only
+      description: "CC-dependent call supported only by InterProScan Coils (the 1991 Lupas algorithm; benchmarked close to random against PDB structures)"
+      when: {classes_using_cc: true, cc_rx_domain: false, cc_deepcoil: false, cc_coils: true}
+      steps: 2
+    - id: cc_tm_ambiguous
+      description: "A CC segment overlaps a predicted TM helix: possible hydrophobic-helix artefact"
+      when: {classes_using_cc: true, cc_tm_ambiguous: true}
+      steps: 2
+    - id: cc_not_n_terminal
+      description: "CC lies C-terminal to the NB-ARC domain, unlike canonical CNLs"
+      when: {classes_using_cc: true, cc_is_n_terminal: false}
+      steps: 1
+    - id: deeploc_inconsistent
+      description: "DeepLoc localisation contradicts the assigned class"
+      when: {deeploc_inconsistent: true}
+      steps: 1
+    - id: missing_channel
+      description: "The call depended on an evidence channel whose tool was not available"
+      when: {call_used_missing_channel: true}
+      steps: 2
+  # Classes whose assignment depends on the CC feature.
+  classes_using_cc: [CNL, CN, TM-CC]
+  # Classes whose assignment depends on the TM/SP channels. `other-RLK` is
+  # listed although its rule is shipped disabled (see the rules section), so
+  # that uncommenting that rule needs no further edit here; an id with no rule
+  # is inert.
+  classes_using_tm_sp: [LRR-RLK, LysM-RLK, other-RLK, LRR-RLP, LysM-RLP, other-RLP, TM-CC]
+
+# -----------------------------------------------------------------------------
+# Output
+# -----------------------------------------------------------------------------
+output:
+  missing_value: "NA"
+  list_separator: ";"
+  top_n_rgas_in_report: 50
+  write_locus_summary: true

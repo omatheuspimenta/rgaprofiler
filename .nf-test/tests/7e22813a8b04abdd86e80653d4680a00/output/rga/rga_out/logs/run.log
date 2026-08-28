@@ -1,0 +1,31 @@
+2026-08-28 22:00:30,485 INFO     __main__: rgas_prediction.py v0.0.1 -- organism: r570_subsample
+2026-08-28 22:00:30,487 INFO     __main__: deepcoil: deepcoil_data
+2026-08-28 22:00:30,488 INFO     __main__: deeploc: r570_subsample_deeploc2.csv
+2026-08-28 22:00:30,488 INFO     __main__: deeptmhmm: r570_subsample_deeptmhmm.gff3
+2026-08-28 22:00:30,489 INFO     __main__: interproscan: r570_subsample_interpro.tsv
+2026-08-28 22:00:30,489 INFO     __main__: phobius: r570_subsample_phobius.tsv
+2026-08-28 22:00:30,490 INFO     __main__: signalp: r570_subsample_signalp6_predictions.txt
+2026-08-28 22:00:30,490 INFO     __main__: policies: {'tm': 'union', 'sp': 'signalp', 'cc': 'union'}
+2026-08-28 22:00:30,516 INFO     rga.parsers: InterProScan: 31 rows, 4 proteins, 12 feature hits, 6 domain hits
+2026-08-28 22:00:30,519 INFO     rga.parsers: Phobius: 4 proteins
+2026-08-28 22:00:30,520 INFO     rga.parsers: DeepTMHMM: 4 proteins
+2026-08-28 22:00:30,521 INFO     rga.parsers: SignalP 6.0: 4 proteins
+2026-08-28 22:00:30,524 INFO     rga.parsers: DeepLoc 2.0: 4 proteins
+2026-08-28 22:00:30,526 INFO     rga.parsers: DeepCoil2: reading 1 source(s) from deepcoil_data
+2026-08-28 22:00:30,528 INFO     rga.parsers: DeepCoil2: 6 raw segments over 3 proteins
+2026-08-28 22:00:30,532 INFO     __main__: DeepCoil2: cached segment table written to rga_out/cache/deepcoil_raw_segments.tsv
+2026-08-28 22:00:30,533 INFO     __main__: IDs: 4 canonical proteins; DeepCoil2 mapped 4, unmatched 0
+2026-08-28 22:00:30,544 INFO     rga.evidence: Evidence: 4 proteins; DeepCoil2/Coils CC agreement {'both': 1, 'deepcoil_only': 0, 'coils_only': 1, 'neither': 2, 'rx_domain': 1, 'rx_domain_only': 0}
+2026-08-28 22:00:30,568 INFO     rga.report: Summary: 4 proteins, 1 RGAs
+2026-08-28 22:00:30,571 INFO     __main__: All pipeline invariants hold (4 proteins).
+2026-08-28 22:00:30,596 INFO     __main__: wrote rga_out/rga_predictions.tsv (4 rows)
+2026-08-28 22:00:30,601 INFO     __main__: wrote rga_out/rga_predictions_rga_only.tsv (1 rows)
+2026-08-28 22:00:30,603 INFO     __main__: wrote rga_out/rga_domain_evidence_long.tsv (17 rows)
+2026-08-28 22:00:30,604 INFO     __main__: wrote rga_out/rga_summary_counts.tsv (4 rows)
+2026-08-28 22:00:30,605 INFO     __main__: wrote rga_out/unmatched_ids_report.tsv (0 rows)
+2026-08-28 22:00:30,606 INFO     __main__: wrote rga_out/cc_segment_sensitivity.tsv (6 rows)
+2026-08-28 22:00:30,607 INFO     __main__: wrote rga_out/cc_policy_sensitivity.tsv (3 rows)
+2026-08-28 22:00:30,608 INFO     __main__: wrote rga_out/accession_audit.tsv (60 rows)
+2026-08-28 22:00:30,611 INFO     __main__: wrote rga_out/rga_predictions_by_locus.tsv (4 rows)
+2026-08-28 22:00:30,612 INFO     __main__: wrote report.md, report.html and run_metadata.json
+2026-08-28 22:00:30,612 INFO     __main__: Done. 4 proteins, 1 RGA candidates.

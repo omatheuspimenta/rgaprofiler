@@ -1,0 +1,18 @@
+protein_id	feature	tool	analysis	accession	signature_description	start	end	score_or_evalue
+SoffiXsponR570.09Cg101200.1.p	CC	DeepCoil2	deepcoil2	-	CC segment	22	220	-
+SoffiXsponR570.09Cg101200.1.p	CC	InterProScan	Coils	Coil	Coil	20	51	-
+SoffiXsponR570.09Cg101200.1.p	CC	InterProScan	Coils	Coil	Coil	71	123	-
+SoffiXsponR570.09Cg101200.1.p	CC	InterProScan	Coils	Coil	Coil	131	155	-
+SoffiXsponR570.09Cg101200.1.p	CC	InterProScan	Coils	Coil	Coil	163	187	-
+SoffiXsponR570.09Cg101200.1.p	CC	InterProScan	Coils	Coil	Coil	195	223	-
+SoffiXsponR570.10Eg022100.1.p	CC	InterProScan	Coils	Coil	Coil	17	37	-
+SoffiXsponR570.10Eg022100.1.p	CC	InterProScan	Coils	Coil	Coil	114	141	-
+SoffiXsponR570.10Eg022100.1.p	CC_domain	InterProScan	Pfam	PF18052	Rx N-terminal domain	12	91	2.5E-12
+SoffiXsponR570.10Eg022100.1.p	LRR	InterProScan	Gene3D	G3DSA:3.80.10.10	Ribonuclease Inhibitor	797	1134	2.9E-25
+SoffiXsponR570.10Eg022100.1.p	LRR	InterProScan	Pfam	PF23598	Leucine-rich repeat region	802	1146	4.7E-40
+SoffiXsponR570.10Eg022100.1.p	NB-ARC	InterProScan	Pfam	PF00931	NB-ARC domain	202	371	3.1E-6
+SoffiXsponR570.10Eg022100.1.p	NB-ARC	InterProScan	Pfam	PF00931	NB-ARC domain	456	608	2.2E-11
+SoffiXsponR570.7os1g005900.1.p	TM	Phobius/DeepTMHMM	tm_consensus	-	TM segment	11	25	-
+SoffiXsponR570.7os1g005900.1.p	TM	Phobius/DeepTMHMM	tm_consensus	-	TM segment	56	76	-
+SoffiXsponR570.7os1g005900.1.p	TM	Phobius/DeepTMHMM	tm_consensus	-	TM segment	83	103	-
+SoffiXsponR570.7os1g005900.1.p	TM	Phobius/DeepTMHMM	tm_consensus	-	TM segment	109	127	-

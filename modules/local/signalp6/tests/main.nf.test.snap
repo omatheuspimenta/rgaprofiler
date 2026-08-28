@@ -1,0 +1,14 @@
+{
+    "Run signalp6 - R570 subsample (see tests/testdata/README.md)": {
+        "content": [
+            [
+                "versions.yml:md5,f10bb5d5b6081f4d52425b26abe631bf"
+            ]
+        ],
+        "timestamp": "2026-08-28T10:55:40.016842326",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}
