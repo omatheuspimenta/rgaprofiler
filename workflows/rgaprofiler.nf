@@ -164,18 +164,18 @@ workflow RGAPROFILER {
     //
     FASTA_QC(ch_samplesheet, params.fasta_qc_chunk_size)
     ch_versions = ch_versions.mix(FASTA_QC.out.versions)
-    FASTA_QC.out.fasta.subscribe { meta, fasta -> logStageProgress('FASTA_QC', meta.id) }
+    FASTA_QC.out.fasta.subscribe { meta, fasta -> logStageProgress.call('FASTA_QC', meta.id) }
 
     //
     // Run per-tool prediction modules
     //
     DEEPCOIL2(FASTA_QC.out.fasta)
     ch_versions = ch_versions.mix(DEEPCOIL2.out.versions)
-    DEEPCOIL2.out.results_dir.subscribe { meta, dir -> logStageProgress('DEEPCOIL2', meta.id) }
+    DEEPCOIL2.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPCOIL2', meta.id) }
 
     PHOBIUS(FASTA_QC.out.fasta)
     ch_versions = ch_versions.mix(PHOBIUS.out.versions)
-    PHOBIUS.out.predictions.subscribe { meta, preds -> logStageProgress('PHOBIUS', meta.id) }
+    PHOBIUS.out.predictions.subscribe { meta, preds -> logStageProgress.call('PHOBIUS', meta.id) }
 
     //
     // InterProScan scales much better as many smaller parallel jobs than one huge
@@ -194,22 +194,22 @@ workflow RGAPROFILER {
 
     INTERPROSCAN(ch_ipr_chunks, ipr_dir)
     ch_versions = ch_versions.mix(INTERPROSCAN.out.versions)
-    INTERPROSCAN.out.tsv.subscribe { meta, tsv -> logStageProgress('INTERPROSCAN', meta.id, total_chunks.get()) }
+    INTERPROSCAN.out.tsv.subscribe { meta, tsv -> logStageProgress.call('INTERPROSCAN', meta.id, total_chunks.get()) }
 
     INTERPROSCAN_MERGE(INTERPROSCAN.out.tsv.groupTuple())
-    INTERPROSCAN_MERGE.out.tsv.subscribe { meta, tsv -> logStageProgress('INTERPROSCAN_MERGE', meta.id) }
+    INTERPROSCAN_MERGE.out.tsv.subscribe { meta, tsv -> logStageProgress.call('INTERPROSCAN_MERGE', meta.id) }
 
     DEEPLOC2(FASTA_QC.out.fasta, deeploc2_models, deeploc2_torch_cache)
     ch_versions = ch_versions.mix(DEEPLOC2.out.versions)
-    DEEPLOC2.out.predictions.subscribe { meta, preds -> logStageProgress('DEEPLOC2', meta.id) }
+    DEEPLOC2.out.predictions.subscribe { meta, preds -> logStageProgress.call('DEEPLOC2', meta.id) }
 
     SIGNALP6(FASTA_QC.out.fasta, signalp6_models)
     ch_versions = ch_versions.mix(SIGNALP6.out.versions)
-    SIGNALP6.out.predictions.subscribe { meta, preds -> logStageProgress('SIGNALP6', meta.id) }
+    SIGNALP6.out.predictions.subscribe { meta, preds -> logStageProgress.call('SIGNALP6', meta.id) }
 
     DEEPTMHMM(FASTA_QC.out.fasta, deeptmhmm_weights)
     ch_versions = ch_versions.mix(DEEPTMHMM.out.versions)
-    DEEPTMHMM.out.predictions.subscribe { meta, preds -> logStageProgress('DEEPTMHMM', meta.id) }
+    DEEPTMHMM.out.predictions.subscribe { meta, preds -> logStageProgress.call('DEEPTMHMM', meta.id) }
 
     //
     // Classify proteins into RGA families/subclasses from the six tools' outputs above
@@ -231,7 +231,7 @@ workflow RGAPROFILER {
 
     RGA_CLASSIFY(ch_rga_classify_input)
     ch_versions = ch_versions.mix(RGA_CLASSIFY.out.versions)
-    RGA_CLASSIFY.out.results.subscribe { meta, files -> logStageProgress('RGA_CLASSIFY', meta.id) }
+    RGA_CLASSIFY.out.results.subscribe { meta, files -> logStageProgress.call('RGA_CLASSIFY', meta.id) }
 
     //
     // Render the lightweight custom summary report (decision #3, PLAN.md -- no MultiQC).
@@ -255,7 +255,7 @@ workflow RGAPROFILER {
 
     RGA_REPORT(ch_rga_report_input)
     ch_versions = ch_versions.mix(RGA_REPORT.out.versions)
-    RGA_REPORT.out.report.subscribe { meta, files -> logStageProgress('RGA_REPORT', meta.id) }
+    RGA_REPORT.out.report.subscribe { meta, files -> logStageProgress.call('RGA_REPORT', meta.id) }
 
     //
     // Collate and save software versions
