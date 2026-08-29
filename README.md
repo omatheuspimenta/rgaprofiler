@@ -22,56 +22,97 @@ DeepCoil2, DeepLoc2, SignalP6, and DeepTMHMM can run on a GPU (`--use_gpu`); Pho
 ## Usage
 
 > [!NOTE]
-> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.
+> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow.
 
-### Prerequisites
+> [!IMPORTANT]
+> Every one of the steps below is required before **any** run of this pipeline succeeds — including the small bundled test in step 5. There is no "just try it first" shortcut: the pipeline checks for all four license-gated software/database sets (InterProScan, DeepTMHMM, SignalP6, DeepLoc2) before it starts any work, test data or not, and refuses to run if any of them is missing.
 
-Before running the pipeline you need, on the machine that will run it:
+Follow these steps in order, on the machine that will actually run the pipeline:
 
-1. [Nextflow](https://www.nextflow.io/docs/latest/install.html) (`>=25.10.4`) installed and on your `PATH`.
-2. [Docker](https://docs.docker.com/get-docker/) installed and running (`docker info` should succeed). This pipeline's tools ship as ready-to-use Docker images, so Docker is the only container engine to install — there is nothing to build yourself.
-3. The license-gated software/model weights that a few of the tools need (InterProScan's database, and DeepTMHMM/SignalP6/DeepLoc2's model weights) — these cannot legally be bundled in the Docker images and must be downloaded by you. See [`docs/software-setup.md`](docs/software-setup.md) for exactly what to download, from where, and where to place it before your first real run.
-4. A [samplesheet](#samplesheet) listing the protein FASTA file(s) you want to analyse (see below).
-
-### Quick check: run the bundled test data first
-
-Before pointing the pipeline at your own data, confirm your Nextflow/Docker setup works end to end using the small dataset bundled with the pipeline (a handful of real sequences, finishes in a few minutes and downloads all Docker images automatically):
+### 1. Get the pipeline
 
 ```bash
-nextflow run omatheuspimenta/rgaprofiler \
+git clone https://github.com/omatheuspimenta/rgaprofiler.git
+cd rgaprofiler
+```
+
+Clone it rather than letting `nextflow run omatheuspimenta/rgaprofiler` fetch it for you on first use. The next steps download several tens of GB of license-gated software into a `softwares/` folder inside the pipeline directory and run a setup script "from the pipeline root" — cloning gives you an obvious, visible folder to do that in. (Once everything below is downloaded, you can switch to running `nextflow run omatheuspimenta/rgaprofiler` from anywhere and point `--softwares_dir`/`--interproscan_db` at this cloned folder if you prefer; that's an optional convenience, not required.)
+
+### 2. Install Nextflow
+
+Install [Nextflow](https://www.nextflow.io/docs/latest/install.html) (`>=25.10.4`) and make sure it's on your `PATH`:
+
+```bash
+nextflow -version
+```
+
+### 3. Install Docker
+
+Install [Docker](https://docs.docker.com/get-docker/) and make sure it's running:
+
+```bash
+docker info
+```
+
+This pipeline's tools ship as ready-to-use public Docker images on GHCR — Docker pulls them automatically the first time each is needed, so there is nothing to build yourself. `-profile docker` is the only container profile this pipeline is built and tested with (see [`docs/usage.md`](docs/usage.md#-profile) for why the others aren't recommended).
+
+### 4. Download the license-gated software (all four, every time)
+
+A few of the tools this pipeline runs need model weights or databases that cannot legally be bundled into the Docker images, so you download them yourself, once, into a `softwares/` folder that stays local to your machine (git-ignored, never uploaded anywhere):
+
+| Tool | What | Required even for the test data? |
+| --- | --- | --- |
+| InterProScan | Its full release + member-database data (tens of GB) | Yes |
+| DeepTMHMM | 5 model checkpoints + 3 ESM1b weight files (academic license) | Yes |
+| SignalP 6.0 | Model weights for one run mode (academic license) | Yes |
+| DeepLoc 2 | Classifier checkpoints + ESM1b base encoder (academic license) | Yes |
+
+Go to [`docs/software-setup.md`](docs/software-setup.md) now and work through all four "Per-tool setup" sections there — it tells you exactly where to go, what to download, and what command to run to unpack/place each one. Come back here once every tool's files are in place.
+
+Then verify nothing is missing before you burn time on a run that will just fail at the preflight check:
+
+```bash
+./bin/check_software_present.sh interproscan   <path/to/interproscan-5.XX-YY.0>
+./bin/check_software_present.sh deeptmhmm      softwares
+./bin/check_software_present.sh signalp6       softwares
+./bin/check_software_present.sh deeploc2       softwares
+```
+
+Each prints `ERROR: ...` and exits non-zero if something required is missing, naming exactly what and where to get it. Don't move on until all four exit cleanly.
+
+### 5. Run the bundled test data
+
+Confirm your Nextflow/Docker/software setup works end to end using the small dataset bundled with the pipeline (a handful of real sequences, finishes in a few minutes; the first run additionally downloads ~7 Docker images, a few GB total):
+
+```bash
+nextflow run . \
    -profile docker,test \
    --interproscan_db /path/to/interproscan-5.XX-YY.0 \
    --outdir results_test
 ```
 
-`--interproscan_db` is the one input this quick check still needs from you — see [`docs/software-setup.md`](docs/software-setup.md#interproscan) for how to obtain it. If this finishes without errors, your setup is ready for real data below.
+`--interproscan_db` is the path `docs/software-setup.md`'s InterProScan setup step gave you; the other three tools' software is picked up automatically from `./softwares` (step 4). If this finishes without errors, your setup is ready for real data.
 
-### Samplesheet
+### 6. Prepare a samplesheet for your own data
 
-First, prepare a samplesheet with your input data that looks as follows:
-
-`samplesheet.csv`:
-
-```csv
+```csv title="samplesheet.csv"
 sample,fasta
 sample1,/path/to/sample1.protein.fasta
 ```
 
-Each row is one protein FASTA to profile. `sample` is a free-form identifier; `fasta` must exist and end in `.fa`/`.fasta` (optionally gzipped).
+Each row is one protein FASTA to profile. `sample` is a free-form identifier; `fasta` must be an **absolute path** that exists and ends in `.fa`/`.fasta` (optionally gzipped). See [`docs/usage.md`](docs/usage.md#samplesheet-input) for the full explanation, including why a relative path here is risky.
 
-You'll also need the license-gated software/databases each tool expects under `--softwares_dir` (default `./softwares`) — see [`docs/software-setup.md`](docs/software-setup.md) for exactly what to download and where to put it, and `--interproscan_db` pointed at your InterProScan database directory (no default, since it varies per install).
-
-Now, you can run the pipeline using:
+### 7. Run the pipeline on your own data
 
 ```bash
-nextflow run omatheuspimenta/rgaprofiler \
+nextflow run . \
    -profile docker \
    --input samplesheet.csv \
    --interproscan_db /path/to/interproscan-5.XX-YY.0 \
    --outdir <OUTDIR>
 ```
 
-`-profile docker` is what this pipeline is built and tested with — see the [prerequisites](#prerequisites) above. If your institution provides its own [nf-core/configs](https://github.com/nf-core/configs) profile, you can add it alongside, e.g. `-profile docker,<institute>`.
+If your institution provides its own [nf-core/configs](https://github.com/nf-core/configs) profile, you can add it alongside, e.g. `-profile docker,<institute>`. See [`docs/usage.md`](docs/usage.md) for the full list of parameters, profiles (including `long_running` for a full-scale proteome), and GPU options (`--use_gpu`).
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).

@@ -8,6 +8,12 @@ This pipeline predicts RGAs (Resistance Gene Analogs) in plant proteomes — it 
 or more protein FASTA files, not sequencing reads. See the main [`README.md`](../README.md)
 for a description of what it does and [`docs/output.md`](output.md) for what it produces.
 
+> [!TIP]
+> First time running this pipeline? Follow the numbered walkthrough in the
+> [main `README.md`](../README.md#usage) instead of this page — it takes you from a fresh
+> clone to a finished test run in order. This page is a reference for everything beyond that:
+> every parameter, profile, and advanced option.
+
 ## Samplesheet input
 
 You will need to create a samplesheet listing the protein FASTA file(s) you'd like to
@@ -44,12 +50,27 @@ An [example samplesheet](../assets/samplesheet.csv) has been provided with the p
 
 ## Running the pipeline
 
-The typical command for running the pipeline is as follows:
+The typical command for running the pipeline, from a clone of this repository (see
+[`README.md`](../README.md#1-get-the-pipeline) for why cloning is recommended over letting
+Nextflow fetch the pipeline itself), is as follows:
+
+```bash
+nextflow run . \
+    --input ./samplesheet.csv \
+    --interproscan_db /path/to/interproscan-5.XX-YY.0 \
+    --outdir ./results \
+    -profile docker
+```
+
+If you've already populated `softwares/` on this machine and would rather not keep a local
+clone around, you can instead let Nextflow pull and cache the pipeline itself, and point
+`--softwares_dir`/`--interproscan_db` at wherever that software lives:
 
 ```bash
 nextflow run omatheuspimenta/rgaprofiler \
     --input ./samplesheet.csv \
     --interproscan_db /path/to/interproscan-5.XX-YY.0 \
+    --softwares_dir /path/to/softwares \
     --outdir ./results \
     -profile docker
 ```
@@ -94,7 +115,19 @@ You can also generate such `YAML`/`JSON` files via [nf-core/launch](https://nf-c
 
 ### Updating the pipeline
 
-When you run the above command, Nextflow automatically pulls the pipeline code from GitHub and stores it as a cached version. When running the pipeline after this, it will always use the cached version if available - even if the pipeline has been updated since. To make sure that you're running the latest version of the pipeline, make sure that you regularly update the cached version of the pipeline:
+If you're running from a clone (`nextflow run .`, the recommended path above), update it the
+normal git way:
+
+```bash
+git pull
+```
+
+If instead you're running the pipeline by name (`nextflow run omatheuspimenta/rgaprofiler`),
+Nextflow automatically pulls the pipeline code from GitHub on first use and stores it as a
+cached version. When running the pipeline after this, it will always use the cached version
+if available - even if the pipeline has been updated since. To make sure that you're running
+the latest version of the pipeline, make sure that you regularly update the cached version of
+the pipeline:
 
 ```bash
 nextflow pull omatheuspimenta/rgaprofiler
