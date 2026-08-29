@@ -8,9 +8,6 @@ include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pi
 include { logColours             } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_rgaprofiler_pipeline'
 
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.ConcurrentHashMap
-
 include { FASTA_QC           } from '../modules/local/fasta_qc'
 include { DEEPCOIL2          } from '../modules/local/deepcoil2'
 include { PHOBIUS            } from '../modules/local/phobius'
@@ -122,7 +119,7 @@ workflow RGAPROFILER {
     // Resolved asynchronously (channel.count() only emits once the upstream channel
     // closes) but in practice ready almost immediately: the samplesheet is a small,
     // already-in-memory list, not something fetched/streamed sample by sample.
-    def total_samples = new AtomicInteger(0)
+    def total_samples = new java.util.concurrent.atomic.AtomicInteger(0)
     ch_samplesheet.count().subscribe { n ->
         total_samples.set(n as int)
         log.info ''
@@ -132,8 +129,8 @@ workflow RGAPROFILER {
         log.info "${colors.bold}${colors.purple}${'=' * 60}${colors.reset}"
     }
 
-    def stage_started  = new ConcurrentHashMap()
-    def stage_counters = new ConcurrentHashMap()
+    def stage_started  = new java.util.concurrent.ConcurrentHashMap()
+    def stage_counters = new java.util.concurrent.ConcurrentHashMap()
 
     // Logs one "<sample> done (X/Y)" line per completed sample/chunk for `stage`, plus
     // a one-off "started" line the first time the stage is seen and a "complete" line
@@ -147,7 +144,7 @@ workflow RGAPROFILER {
             log.info ''
             log.info "${tag} ${colors.bold}${stage}${colors.reset} started"
         }
-        def counter = stage_counters.computeIfAbsent(stage) { new AtomicInteger(0) }
+        def counter = stage_counters.computeIfAbsent(stage) { new java.util.concurrent.atomic.AtomicInteger(0) }
         def done = counter.incrementAndGet()
         def total = total_override != null ? total_override : total_samples.get()
         def total_display = total > 0 ? total.toString() : '?'
@@ -192,7 +189,7 @@ workflow RGAPROFILER {
     def ch_ipr_chunks = FASTA_QC.out.chunks.transpose()
     // Resolved asynchronously, same caveat as total_samples above: reads as '?' in the
     // progress log until every sample has finished FASTA_QC and the chunk count is final.
-    def total_chunks = new AtomicInteger(0)
+    def total_chunks = new java.util.concurrent.atomic.AtomicInteger(0)
     ch_ipr_chunks.count().subscribe { n -> total_chunks.set(n as int) }
 
     INTERPROSCAN(ch_ipr_chunks, ipr_dir)
