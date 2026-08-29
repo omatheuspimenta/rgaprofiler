@@ -1,11 +1,11 @@
 [PIPELINE] omatheuspimenta/rgaprofiler 1.0.0dev | profile=docker
 [WORKDIR] /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/975d10e8fe65366fc0d1e675495bc917/work
-[PROCESS 7e/92e32a] PHOBIUS (r570_subsample)
-[PROCESS ea/cad114] DEEPTMHMM (r570_subsample)
-[PROCESS d5/080774] SIGNALP6 (r570_subsample)
-[PROCESS f3/d997c0] INTERPROSCAN (r570_subsample)
-[PROCESS 73/3b6342] DEEPCOIL2 (r570_subsample)
-[PROCESS 86/1c5831] DEEPLOC2 (r570_subsample)
-[PROCESS 7f/97a259] RGA_CLASSIFY (r570_subsample)
+[PROCESS 23/f47a7f] INTERPROSCAN (r570_subsample)
+[PROCESS 21/670d2c] DEEPTMHMM (r570_subsample)
+[PROCESS 49/9ada17] SIGNALP6 (r570_subsample)
+[PROCESS d4/f64125] PHOBIUS (r570_subsample)
+[PROCESS a0/47bde3] DEEPCOIL2 (r570_subsample)
+[PROCESS f2/2c3abf] DEEPLOC2 (r570_subsample)
+[PROCESS 99/d6db14] RGA_CLASSIFY (r570_subsample)
 
 [SUCCESS] completed=7 failed=0 cached=0

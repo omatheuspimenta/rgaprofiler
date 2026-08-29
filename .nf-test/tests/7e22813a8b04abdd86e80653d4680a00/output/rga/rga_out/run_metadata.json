@@ -194,7 +194,7 @@
       "available": true,
       "n_lines": 31,
       "path": "r570_subsample_interpro.tsv",
-      "sha256": "95bed53cd0c71e4ac4c1e318a2b0046a43ebaec58c9e6cb2e0e9ffb7fdabc344",
+      "sha256": "d44332d3d641078531dec4b9a3b9ddbf577ca612344464f17e0621b2b7eebd1d",
       "size_bytes": 5008,
       "tool": "interproscan"
     },
@@ -218,7 +218,7 @@
       "available": true,
       "n_lines": 6,
       "path": "r570_subsample_signalp6_predictions.txt",
-      "sha256": "49c48c18f06698e2615eb301c4be379564d64bdfdcb755ac068fcb94588722ca",
+      "sha256": "6f2e428b7b948d1619bf523dba317320fd5d8ba3de045407f11a5b0e0fba5cbe",
       "size_bytes": 1299,
       "tool": "signalp"
     },
@@ -902,5 +902,5 @@
     "sp_overlap": 0.5
   },
   "script_version": "0.0.1",
-  "timestamp_utc": "2026-08-28 22:00:30 UTC"
+  "timestamp_utc": "2026-08-29 02:11:21 UTC"
 }

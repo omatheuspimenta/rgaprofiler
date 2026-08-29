@@ -1,0 +1,101 @@
+name: Build and publish Docker images
+
+# See docs/publishing-docker-images.md for the full explanation of what this does, why
+# these two triggers were chosen, and the one-time GitHub-side setup it needs.
+#
+# Triggers:
+#   - Manual (workflow_dispatch): build/publish on demand, optionally just one image,
+#     without needing to cut a release first (e.g. after a Dockerfile fix).
+#   - On a published GitHub Release: every tagged release gets fresh images for all
+#     seven tools automatically, so a release is never silently paired with stale images.
+#
+# Auth: uses the repo's automatic GITHUB_TOKEN (see the `permissions:` block below) --
+# no personal access token or repository secret needs to be created for this to work.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "Image to build (or 'all')"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - deepcoil2
+          - phobius
+          - interproscan
+          - deeploc2
+          - signalp6
+          - deeptmhmm
+          - rga_classify
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-matrix:
+    # Turns the single `image` dispatch input into the matrix job list below: 'all'
+    # (or any release trigger, which has no `inputs`) expands to all seven tools; a
+    # specific choice builds just that one.
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.set-matrix.outputs.images }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ github.event_name }}" = "release" ] || [ "${{ inputs.image }}" = "all" ]; then
+            echo 'images=["deepcoil2","phobius","interproscan","deeploc2","signalp6","deeptmhmm","rga_classify"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'images=["${{ inputs.image }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-push:
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # one huge image failing (e.g. a flaky download) shouldn't cancel the other six
+      matrix:
+        image: ${{ fromJson(needs.build-matrix.outputs.images) }}
+        # Tag convention matches docs/publishing-docker-images.md's table and each
+        # module's commented-out `container 'ghcr.io/omatheuspimenta/...'` line exactly --
+        # keep these three in sync if a tool's version ever changes.
+        include:
+          - image: deepcoil2
+            tag: "2.0.2"
+          - image: phobius
+            tag: "1.01"
+          - image: interproscan
+            tag: "5.78-109.0"
+          - image: deeploc2
+            tag: "1.0.0"
+          - image: signalp6
+            tag: "6.0h"
+          - image: deeptmhmm
+            tag: "1.0"
+          - image: rga_classify
+            tag: "0.0.1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker/${{ matrix.image }}
+          file: docker/${{ matrix.image }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ matrix.tag }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

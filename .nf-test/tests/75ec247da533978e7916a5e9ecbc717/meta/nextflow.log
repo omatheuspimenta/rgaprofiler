@@ -1,90 +1,90 @@
-Aug-28 18:27:53.773 [main] DEBUG nextflow.cli.Launcher - $> nextflow -quiet -log /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/nextflow.log run /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test-75ec247da533978e7916a5e9ecbc717.nf -c /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config -c /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/tests/nextflow.config -params-file /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/params.json -ansi-log false -profile docker -with-trace /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/trace.csv -w /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/work
-Aug-28 18:27:53.854 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/genomics/.nextflow/plugins; core-plugins: nf-amazon@3.9.2,nf-azure@1.22.6,nf-cloudcache@0.6.0,nf-codecommit@0.5.3,nf-console@1.3.0,nf-google@1.27.3,nf-k8s@1.5.4,nf-seqera@0.21.1,nf-tower@1.28.2,nf-wave@1.21.0
-Aug-28 18:27:53.875 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
-Aug-28 18:27:53.876 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
-Aug-28 18:27:53.878 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.14.1 in 'deployment' mode
-Aug-28 18:27:53.892 [main] DEBUG nextflow.util.RetryConfig - Missing nextflow session - using default retry config
-Aug-28 18:27:53.997 [main] DEBUG nextflow.plugin.PluginUpdater - Using plugin repository: HttpPluginRepository [registry]; url=https://registry.nextflow.io/api
-Aug-28 18:27:54.003 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
-Aug-28 18:27:54.042 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
-Aug-28 18:27:54.046 [main] DEBUG nextflow.config.ConfigBuilder - User config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
-Aug-28 18:27:54.047 [main] DEBUG nextflow.config.ConfigBuilder - User config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/tests/nextflow.config
-Aug-28 18:27:54.048 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
-Aug-28 18:27:54.049 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
-Aug-28 18:27:54.049 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/tests/nextflow.config
-Aug-28 18:27:54.053 [main] DEBUG nextflow.config.ConfigParserFactory - Using config parser v2
-Aug-28 18:27:54.071 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `docker`
-Aug-28 18:27:55.104 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `docker`
-Aug-28 18:27:55.378 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `docker`
-Aug-28 18:27:55.385 [main] DEBUG nextflow.config.ConfigBuilder - Available config profiles: [debug, conda, mamba, docker, arm64, emulate_amd64, singularity, podman, shifter, charliecloud, apptainer, wave, gpu, test, test_full, abims, adcra, alice, alliance_canada, apollo, arcc, aws_tower, awsbatch, azurebatch, bi, bigpurple, bih, binac2, biohpc_gen, biowulf, bluebear, cambridge, cannon, cbe, ccga_dx, ccga_cau, ceci_dragon2, ceci_nic5, cedars, ceres, cfc, cfc_dev, cheaha, computerome, create, crg, crick, cropdiversityhpc, crukmi, csiro_petrichor, czbiohub_aws, daisybio, denbi_qbic, dkfz, dirac, ebc, eddie, ebi_codon, ebi_codon_slurm, einstein, embl_hd, engaging, ethz_euler, eva, eva_grace, fgcz, fred_hutch, fsu_draco, fub_curta, genotoul, genouest, giga, gis, googlebatch, hasta, hazel, hki_genie, hypatia, humantechnopole, icr_alma, ifb_core, imb, imperial, incliva, ipop_up, iris, janelia, jax, jex, unsw_katana, ku_sund_danhead, kaust, kelvin2, ki_luria, leicester, lovelace, lrz_cm4, lugh, m3c, maestro, mahuika, mana, marjorie, marvin, mccleary, mcw_rcc, medair, mjolnir_globe, mpcdf, mpcdf_viper, mssm, munin, nci_gadi, nu_genomics, nygc, nyu_hpc, oist, palmetto, pasteur, pawsey_setonix, pdc_kth, phoenix, psmn, purdue_bell, purdue_gautschi, purdue_negishi, qmul_apocrita, rki, rosalind, rosalind_uge, roslin, sage, sahmri, sanger, ilifu, seadragon, seattlechildrens, seawulf, seg_globe, self_hosted_runner, shu_bmrc, stjude, tes, tigem, tubingen_apg, tufts, tuos_stanage, ucd_sonic, ucl_cscluster, ucl_myriad, uct_hpc, uge, unc_lccc, unc_longleaf, unibe_ibu, unity, uod_hpc, uppmax, utd_juno, uw_hyak_pedslabs, uzh, uzl_omics, vai, verily_workbench, vsc_calcua, vsc_kul_uhasselt, vsc_ugent, wehi, xanadu, york_viking]
-Aug-28 18:27:55.435 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins declared=[nf-schema@2.5.1]
-Aug-28 18:27:55.436 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
-Aug-28 18:27:55.436 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[nf-schema@2.5.1]
-Aug-28 18:27:55.439 [main] DEBUG nextflow.plugin.PluginUpdater - Installing plugin nf-schema version: 2.5.1
-Aug-28 18:27:55.447 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-schema@2.5.1' resolved
-Aug-28 18:27:55.448 [main] INFO  org.pf4j.AbstractPluginManager - Start plugin 'nf-schema@2.5.1'
-Aug-28 18:27:55.453 [main] DEBUG nextflow.plugin.BasePlugin - Plugin started nf-schema@2.5.1
-Aug-28 18:27:55.460 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/genomics/.nextflow/secrets/store.json
-Aug-28 18:27:55.463 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@6bcae9] - activable => nextflow.secret.LocalSecretsProvider@6bcae9
-Aug-28 18:27:55.480 [main] ERROR org.pf4j.AbstractExtensionFinder - Different class loaders: 'org.pf4j.PluginClassLoader@6ee88e21' (E) and 'jdk.internal.loader.ClassLoaders$AppClassLoader@764c12b6' (EP)
-Aug-28 18:27:55.514 [main] WARN  nextflow.config.ConfigValidator - Unrecognized config option 'validation.defaultIgnoreParams'
-Aug-28 18:27:55.514 [main] WARN  nextflow.config.ConfigValidator - Unrecognized config option 'validation.monochromeLogs'
-Aug-28 18:27:55.557 [main] DEBUG nextflow.Session - Session UUID: 59d9efd9-2027-4772-adf7-35f0ca45881b
-Aug-28 18:27:55.558 [main] DEBUG nextflow.Session - Run name: tiny_pauling
-Aug-28 18:27:55.558 [main] DEBUG nextflow.Session - Executor pool size: 256
-Aug-28 18:27:55.566 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
-Aug-28 18:27:55.572 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=768; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
-Aug-28 18:27:55.587 [main] DEBUG nextflow.cli.CmdRun - 
+Aug-28 23:02:05.681 [main] DEBUG nextflow.cli.Launcher - $> nextflow -quiet -log /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/nextflow.log run /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test-75ec247da533978e7916a5e9ecbc717.nf -c /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config -c /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/tests/nextflow.config -params-file /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/params.json -ansi-log false -profile docker -with-trace /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/trace.csv -w /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/work
+Aug-28 23:02:05.759 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/genomics/.nextflow/plugins; core-plugins: nf-amazon@3.9.2,nf-azure@1.22.6,nf-cloudcache@0.6.0,nf-codecommit@0.5.3,nf-console@1.3.0,nf-google@1.27.3,nf-k8s@1.5.4,nf-seqera@0.21.1,nf-tower@1.28.2,nf-wave@1.21.0
+Aug-28 23:02:05.780 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-28 23:02:05.781 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-28 23:02:05.783 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.14.1 in 'deployment' mode
+Aug-28 23:02:05.797 [main] DEBUG nextflow.util.RetryConfig - Missing nextflow session - using default retry config
+Aug-28 23:02:05.896 [main] DEBUG nextflow.plugin.PluginUpdater - Using plugin repository: HttpPluginRepository [registry]; url=https://registry.nextflow.io/api
+Aug-28 23:02:05.901 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-28 23:02:05.936 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
+Aug-28 23:02:05.940 [main] DEBUG nextflow.config.ConfigBuilder - User config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
+Aug-28 23:02:05.940 [main] DEBUG nextflow.config.ConfigBuilder - User config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/tests/nextflow.config
+Aug-28 23:02:05.942 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
+Aug-28 23:02:05.942 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/nextflow.config
+Aug-28 23:02:05.942 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/tests/nextflow.config
+Aug-28 23:02:05.945 [main] DEBUG nextflow.config.ConfigParserFactory - Using config parser v2
+Aug-28 23:02:05.961 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `docker`
+Aug-28 23:02:07.046 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `docker`
+Aug-28 23:02:07.346 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `docker`
+Aug-28 23:02:07.355 [main] DEBUG nextflow.config.ConfigBuilder - Available config profiles: [debug, conda, mamba, docker, arm64, emulate_amd64, singularity, podman, shifter, charliecloud, apptainer, wave, gpu, test, test_full, long_running, abims, adcra, alice, alliance_canada, apollo, arcc, aws_tower, awsbatch, azurebatch, bi, bigpurple, bih, binac2, biohpc_gen, biowulf, bluebear, cambridge, cannon, cbe, ccga_dx, ccga_cau, ceci_dragon2, ceci_nic5, cedars, ceres, cfc, cfc_dev, cheaha, computerome, create, crg, crick, cropdiversityhpc, crukmi, csiro_petrichor, czbiohub_aws, daisybio, denbi_qbic, dkfz, dirac, ebc, eddie, ebi_codon, ebi_codon_slurm, einstein, embl_hd, engaging, ethz_euler, eva, eva_grace, fgcz, fred_hutch, fsu_draco, fub_curta, genotoul, genouest, giga, gis, googlebatch, hasta, hazel, hki_genie, hypatia, humantechnopole, icr_alma, ifb_core, imb, imperial, incliva, ipop_up, iris, janelia, jax, jex, unsw_katana, ku_sund_danhead, kaust, kelvin2, ki_luria, leicester, lovelace, lrz_cm4, lugh, m3c, maestro, mahuika, mana, marjorie, marvin, mccleary, mcw_rcc, medair, mjolnir_globe, mpcdf, mpcdf_viper, mssm, munin, nci_gadi, nu_genomics, nygc, nyu_hpc, oist, palmetto, pasteur, pawsey_setonix, pdc_kth, phoenix, psmn, purdue_bell, purdue_gautschi, purdue_negishi, qmul_apocrita, rki, rosalind, rosalind_uge, roslin, sage, sahmri, sanger, ilifu, seadragon, seattlechildrens, seawulf, seg_globe, self_hosted_runner, shu_bmrc, stjude, tes, tigem, tubingen_apg, tufts, tuos_stanage, ucd_sonic, ucl_cscluster, ucl_myriad, uct_hpc, uge, unc_lccc, unc_longleaf, unibe_ibu, unity, uod_hpc, uppmax, utd_juno, uw_hyak_pedslabs, uzh, uzl_omics, vai, verily_workbench, vsc_calcua, vsc_kul_uhasselt, vsc_ugent, wehi, xanadu, york_viking]
+Aug-28 23:02:07.410 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins declared=[nf-schema@2.5.1]
+Aug-28 23:02:07.411 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-28 23:02:07.411 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[nf-schema@2.5.1]
+Aug-28 23:02:07.414 [main] DEBUG nextflow.plugin.PluginUpdater - Installing plugin nf-schema version: 2.5.1
+Aug-28 23:02:07.424 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-schema@2.5.1' resolved
+Aug-28 23:02:07.424 [main] INFO  org.pf4j.AbstractPluginManager - Start plugin 'nf-schema@2.5.1'
+Aug-28 23:02:07.431 [main] DEBUG nextflow.plugin.BasePlugin - Plugin started nf-schema@2.5.1
+Aug-28 23:02:07.439 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/genomics/.nextflow/secrets/store.json
+Aug-28 23:02:07.441 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@445bce9a] - activable => nextflow.secret.LocalSecretsProvider@445bce9a
+Aug-28 23:02:07.462 [main] ERROR org.pf4j.AbstractExtensionFinder - Different class loaders: 'org.pf4j.PluginClassLoader@1f536481' (E) and 'jdk.internal.loader.ClassLoaders$AppClassLoader@764c12b6' (EP)
+Aug-28 23:02:07.500 [main] WARN  nextflow.config.ConfigValidator - Unrecognized config option 'validation.defaultIgnoreParams'
+Aug-28 23:02:07.500 [main] WARN  nextflow.config.ConfigValidator - Unrecognized config option 'validation.monochromeLogs'
+Aug-28 23:02:07.548 [main] DEBUG nextflow.Session - Session UUID: 24b7f79c-3296-45eb-9b8c-77013dfae133
+Aug-28 23:02:07.548 [main] DEBUG nextflow.Session - Run name: cranky_ochoa
+Aug-28 23:02:07.549 [main] DEBUG nextflow.Session - Executor pool size: 256
+Aug-28 23:02:07.557 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+Aug-28 23:02:07.562 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=768; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Aug-28 23:02:07.581 [main] DEBUG nextflow.cli.CmdRun - 
   Version: 26.04.6 build 12646
   Created: 09-07-2026 18:49 UTC (15:49 BRST)
   System: Linux 6.8.0-137-generic
   Runtime: Groovy 4.0.31 on OpenJDK 64-Bit Server VM 21.0.11+10-b1163.116
   Encoding: UTF-8 (UTF-8)
-  Process: 1427627@dgbiomol [127.0.1.1]
-  CPUs: 256 - Mem: 503.5 GB (173.6 GB) - Swap: 10 GB (9.6 GB)
-Aug-28 18:27:55.607 [main] DEBUG nextflow.Session - Work-dir: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/work [ext2/ext3]
-Aug-28 18:27:55.638 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
-Aug-28 18:27:55.647 [main] DEBUG nextflow.Session - Observer factory (v2): LinObserverFactory
-Aug-28 18:27:55.649 [main] DEBUG nextflow.Session - Observer factory (v2): DefaultObserverFactory
-Aug-28 18:27:55.662 [main] DEBUG nextflow.Session - Observer factory (v2): ValidationObserverFactory
-Aug-28 18:27:55.684 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
-Aug-28 18:27:55.692 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 257; maxThreads: 1000
-Aug-28 18:27:55.858 [main] DEBUG nextflow.Session - Session start
-Aug-28 18:27:55.865 [main] DEBUG nextflow.trace.TraceFileObserver - Workflow started -- trace file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/trace.csv
-Aug-28 18:27:55.867 [main] DEBUG nextflow.script.ScriptLoaderFactory - Using script parser v2
-Aug-28 18:27:56.168 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
-Aug-28 18:27:56.291 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_single` matches labels `process_single` for process with name PHOBIUS
-Aug-28 18:27:56.297 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
-Aug-28 18:27:56.298 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
-Aug-28 18:27:56.304 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
-Aug-28 18:27:56.311 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=256; memory=503.5 GB; capacity=256; pollInterval=100ms; dumpInterval=5m
-Aug-28 18:27:56.313 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
-Aug-28 18:27:56.346 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'PHOBIUS': maxForks=0; fair=false; array=0
-Aug-28 18:27:56.409 [main] DEBUG nextflow.Session - Config process names validation disabled as requested
-Aug-28 18:27:56.412 [main] DEBUG nextflow.Session - Igniting dataflow network (1)
-Aug-28 18:27:56.412 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > PHOBIUS
-Aug-28 18:27:56.413 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
-  _nf_script_21953fb0e04655fa: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/phobius/main.nf
+  Process: 3034638@dgbiomol [127.0.1.1]
+  CPUs: 256 - Mem: 503.5 GB (129.1 GB) - Swap: 10 GB (9.6 GB)
+Aug-28 23:02:07.611 [main] DEBUG nextflow.Session - Work-dir: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/work [ext2/ext3]
+Aug-28 23:02:07.649 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-28 23:02:07.660 [main] DEBUG nextflow.Session - Observer factory (v2): LinObserverFactory
+Aug-28 23:02:07.662 [main] DEBUG nextflow.Session - Observer factory (v2): DefaultObserverFactory
+Aug-28 23:02:07.677 [main] DEBUG nextflow.Session - Observer factory (v2): ValidationObserverFactory
+Aug-28 23:02:07.705 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-28 23:02:07.714 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 257; maxThreads: 1000
+Aug-28 23:02:07.895 [main] DEBUG nextflow.Session - Session start
+Aug-28 23:02:07.903 [main] DEBUG nextflow.trace.TraceFileObserver - Workflow started -- trace file: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/meta/trace.csv
+Aug-28 23:02:07.906 [main] DEBUG nextflow.script.ScriptLoaderFactory - Using script parser v2
+Aug-28 23:02:08.228 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-28 23:02:08.358 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_single` matches labels `process_single` for process with name PHOBIUS
+Aug-28 23:02:08.364 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-28 23:02:08.365 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-28 23:02:08.372 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-28 23:02:08.379 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=256; memory=503.5 GB; capacity=256; pollInterval=100ms; dumpInterval=5m
+Aug-28 23:02:08.381 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
+Aug-28 23:02:08.417 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'PHOBIUS': maxForks=0; fair=false; array=0
+Aug-28 23:02:08.482 [main] DEBUG nextflow.Session - Config process names validation disabled as requested
+Aug-28 23:02:08.484 [main] DEBUG nextflow.Session - Igniting dataflow network (1)
+Aug-28 23:02:08.485 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > PHOBIUS
+Aug-28 23:02:08.485 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
   Main: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test-75ec247da533978e7916a5e9ecbc717.nf
-Aug-28 18:27:56.413 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
-Aug-28 18:27:56.413 [main] DEBUG nextflow.Session - Session await
-Aug-28 18:27:56.570 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
-Aug-28 18:27:56.572 [Task submitter] INFO  nextflow.Session - [dc/bedaab] Submitted process > PHOBIUS (r570_subsample)
-Aug-28 18:27:57.513 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: PHOBIUS (r570_subsample); status: COMPLETED; exit: 0; error: -; workDir: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/work/dc/bedaab0714198c3f78ccfb45e58da0]
-Aug-28 18:27:57.514 [Task monitor] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'TaskFinalizer' minSize=10; maxSize=768; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
-Aug-28 18:27:57.538 [TaskFinalizer-1] WARN  nextflow.processor.PublishDir - Process `PHOBIUS` publishDir path contains a variable with a null value
-Aug-28 18:27:57.543 [TaskFinalizer-1] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'PublishDir' minSize=10; maxSize=768; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
-Aug-28 18:27:57.554 [main] DEBUG nextflow.Session - Session await > all processes finished
-Aug-28 18:27:57.612 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
-Aug-28 18:27:57.612 [main] DEBUG nextflow.Session - Session await > all barriers passed
-Aug-28 18:27:57.614 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'TaskFinalizer' shutdown completed (hard=false)
-Aug-28 18:27:57.614 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'PublishDir' shutdown completed (hard=false)
-Aug-28 18:27:57.626 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=1; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=272ms; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=1; peakCpus=1; peakMemory=6 GB; ]
-Aug-28 18:27:57.640 [main] DEBUG nextflow.trace.ReportObserver - Workflow completed -- rendering execution report
-Aug-28 18:27:58.083 [main] DEBUG nextflow.trace.TimelineObserver - Workflow completed -- rendering execution timeline
-Aug-28 18:27:58.137 [main] DEBUG nextflow.trace.TraceFileObserver - Workflow completed -- saving trace file
-Aug-28 18:27:58.142 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
-Aug-28 18:27:58.151 [main] INFO  org.pf4j.AbstractPluginManager - Stop plugin 'nf-schema@2.5.1'
-Aug-28 18:27:58.151 [main] DEBUG nextflow.plugin.BasePlugin - Plugin stopped nf-schema
-Aug-28 18:27:58.152 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'FileTransfer' shutdown completed (hard=false)
-Aug-28 18:27:58.152 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+  _nf_script_21953fb0e04655fa: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/modules/local/phobius/main.nf
+Aug-28 23:02:08.486 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+Aug-28 23:02:08.486 [main] DEBUG nextflow.Session - Session await
+Aug-28 23:02:08.657 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-28 23:02:08.659 [Task submitter] INFO  nextflow.Session - [29/b0917e] Submitted process > PHOBIUS (r570_subsample)
+Aug-28 23:02:09.598 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: PHOBIUS (r570_subsample); status: COMPLETED; exit: 0; error: -; workDir: /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/75ec247da533978e7916a5e9ecbc717/work/29/b0917e3c1d135138f868b49e6ef869]
+Aug-28 23:02:09.600 [Task monitor] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'TaskFinalizer' minSize=10; maxSize=768; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Aug-28 23:02:09.626 [TaskFinalizer-1] WARN  nextflow.processor.PublishDir - Process `PHOBIUS` publishDir path contains a variable with a null value
+Aug-28 23:02:09.629 [TaskFinalizer-1] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'PublishDir' minSize=10; maxSize=768; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Aug-28 23:02:09.634 [main] DEBUG nextflow.Session - Session await > all processes finished
+Aug-28 23:02:09.696 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
+Aug-28 23:02:09.696 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-28 23:02:09.699 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'TaskFinalizer' shutdown completed (hard=false)
+Aug-28 23:02:09.699 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'PublishDir' shutdown completed (hard=false)
+Aug-28 23:02:09.711 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=1; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=265ms; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=1; peakCpus=1; peakMemory=6 GB; ]
+Aug-28 23:02:09.725 [main] DEBUG nextflow.trace.ReportObserver - Workflow completed -- rendering execution report
+Aug-28 23:02:10.156 [main] DEBUG nextflow.trace.TimelineObserver - Workflow completed -- rendering execution timeline
+Aug-28 23:02:10.208 [main] DEBUG nextflow.trace.TraceFileObserver - Workflow completed -- saving trace file
+Aug-28 23:02:10.214 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-28 23:02:10.224 [main] INFO  org.pf4j.AbstractPluginManager - Stop plugin 'nf-schema@2.5.1'
+Aug-28 23:02:10.224 [main] DEBUG nextflow.plugin.BasePlugin - Plugin stopped nf-schema
+Aug-28 23:02:10.225 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'FileTransfer' shutdown completed (hard=false)
+Aug-28 23:02:10.225 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye

@@ -72,7 +72,16 @@ SignalP 6.0 ships three alternative run modes (`fast`, `slow`, `slow-sequential`
 
 Download SignalP 6.0 from https://services.healthtech.dtu.dk/services/SignalP-6.0/ and place its `models/` directory contents at the path above.
 
-**GPU note**: unlike DeepLoc2, SignalP6 has no `--device`/`-d` runtime flag — whether it uses a GPU is a property of the weight *files themselves* (`signalp6_convert_models gpu /path/to/models/` rewrites them in place, per SignalP6's own README). This repo's reference weights haven't been GPU-converted, so the module's `process_gpu` label currently has no effect until you convert your own copy.
+**GPU note**: unlike DeepLoc2, SignalP6 has no `--device`/`-d` runtime flag — whether it uses a GPU is a property of the weight *files themselves*. The pipeline handles this automatically: whenever GPU is requested/detected (`--use_gpu auto`, the default, or `--use_gpu true`), `workflows/rgaprofiler.nf` looks for a **separate**, GPU-converted copy of the weights at `softwares_dir/SignalP6/signalp-6-package/models_gpu/` and points SignalP6 at that directory instead of the normal CPU one — you just need to have produced that directory once, ahead of time (SignalP6 has no way to convert its own weights at run time, and doing so on every run would be needlessly slow anyway). One-time setup, run from the signalp6 image so `signalp6_convert_models` and its Python dependencies are available (needs the same real GPU + NVIDIA Container Toolkit as running the pipeline itself — this actually rewrites tensors onto a CUDA device, it isn't a pure format conversion):
+
+```bash
+docker run --rm --gpus all -u $(id -u):$(id -g) -v "$(pwd)/softwares/SignalP6":/data quay.io/signalp6:baseline bash -c '
+    cp -r /data/signalp-6-package/models /data/signalp-6-package/models_gpu &&
+    signalp6_convert_models gpu /data/signalp-6-package/models_gpu
+'
+```
+
+This copies the CPU weights first, so the original `models/` directory is left untouched — `--use_gpu false` still works afterwards, unaffected. `-u $(id -u):$(id -g)` matters: the container needs to write into your bind-mounted `softwares/`, which it can't do running as its own internal user. If `models_gpu/` doesn't exist yet and GPU is requested, the pipeline's pre-flight check (`bin/check_software_present.sh`) fails fast with this exact command rather than letting SignalP6 itself fail deep inside a container. Pass `--use_gpu false` to skip all of this and run on CPU (slower, but needs no extra setup).
 
 ### DeepLoc 2
 

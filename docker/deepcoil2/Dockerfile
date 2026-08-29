@@ -48,22 +48,30 @@ RUN pip install --upgrade pip==23.3.2 setuptools==65.5.1 wheel && \
 # wants CUDA 11.2/cuDNN 8.1, which does support Ampere. The nvidia-*-cu11 pip packages
 # below are TF's own redistributable CUDA/cuDNN runtime libraries -- no system CUDA
 # toolkit or alternate base image needed, only LD_LIBRARY_PATH (set in the runtime stage).
+#
+# All nvidia-*-cu11 versions here are pinned to what torch==1.13.1 (installed next) itself
+# pulls in as ITS OWN dependencies -- installing torch afterward silently overrides an
+# unpinned or differently-pinned copy of the same package (confirmed empirically: pinning
+# nvidia-cudnn-cu11 to a different, also-valid version here still built and ran correctly,
+# but the installed image silently ended up on torch's version instead, not this one).
+# Pinning explicitly to torch's actual versions here removes that install-order dependency
+# entirely, so a rebuild is deterministic rather than "whatever pip resolves this time."
 RUN pip install tensorflow==2.11.0 \
-        nvidia-cudnn-cu11==8.6.0.163 \
-        nvidia-cublas-cu11 \
-        nvidia-cuda-nvrtc-cu11 \
-        nvidia-cuda-runtime-cu11 \
-        nvidia-cufft-cu11 \
-        nvidia-curand-cu11 \
-        nvidia-cusolver-cu11 \
-        nvidia-cusparse-cu11
+        nvidia-cudnn-cu11==8.5.0.96 \
+        nvidia-cublas-cu11==11.10.3.66 \
+        nvidia-cuda-nvrtc-cu11==11.7.99 \
+        nvidia-cuda-runtime-cu11==11.7.99 \
+        nvidia-cufft-cu11==10.9.0.58 \
+        nvidia-curand-cu11==10.3.0.86 \
+        nvidia-cusolver-cu11==11.4.1.48 \
+        nvidia-cusparse-cu11==11.7.5.86
 
 # torch, pinned within deepcoil's torch<2.0,>=1.2 range. deepcoil's internal allennlp/ELMo
 # encoder (deepcoil.utils.seqvec.SeqVec) runs on torch, not just TF -- 1.7.1's default
 # PyPI wheel predates Ampere GPU support ("CUDA error: no kernel image is available for
 # execution on the device" at runtime, confirmed empirically), so bumped to the newest
 # version still inside deepcoil's declared upper bound; 1.13.1's default wheel has
-# Ampere/Ada kernels built in.
+# Ampere/Ada kernels built in. (Its own nvidia-*-cu11 pins are exactly what's pinned above.)
 RUN pip install torch==1.13.1
 
 # jsonnet pinned to an older version (2020 era) so allennlp

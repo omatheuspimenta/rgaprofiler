@@ -2,10 +2,11 @@ process SIGNALP6 {
     tag "$meta.id"
     label 'process_medium'
     label 'process_gpu' // SignalP6 supports GPU execution; see params.use_gpu / docs/software-setup.md.
-                         // Unlike deeploc2, SignalP6 has no --device flag: it auto-detects GPU from
-                         // whether the *weight files themselves* were GPU-converted (signalp6_convert_models),
-                         // which softwares/SignalP6/'s default install is not -- so this only takes effect
-                         // once a GPU-converted model_dir is supplied. See docs/software-setup.md.
+                         // Unlike deeploc2, SignalP6 has no --device flag: whether it uses a GPU is a
+                         // property of the *weight files themselves*. workflows/rgaprofiler.nf resolves
+                         // this before the task is even built (same GPU-detection logic as the process_gpu
+                         // label, kept in sync) and picks which models_/models_gpu/ directory to stage
+                         // here accordingly -- this module just points --model_dir at whatever it's given.
 
     // Set container to use for this process
     container 'signalp6:baseline'
@@ -13,7 +14,8 @@ process SIGNALP6 {
 
     input:
     tuple val(meta), path(fasta)
-    path signalp6_models // softwares_dir/SignalP6/signalp-6-package/models -- DTU model weights (license-gated, not baked into the image)
+    path signalp6_models // softwares_dir/SignalP6/signalp-6-package/{models,models_gpu} -- DTU model weights
+                          // (license-gated, not baked into the image); which directory is picked upstream
 
     output:
     tuple val(meta), path("results/*"), emit: predictions

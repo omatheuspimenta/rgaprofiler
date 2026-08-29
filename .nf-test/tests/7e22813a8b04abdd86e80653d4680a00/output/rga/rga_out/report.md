@@ -1,6 +1,6 @@
 # RGA prediction report -- r570_subsample
 
-*Generated 2026-08-28 22:00:30 UTC by `rgas_prediction.py` v0.0.1 (config v0.0.1).*
+*Generated 2026-08-29 02:11:21 UTC by `rgas_prediction.py` v0.0.1 (config v0.0.1).*
 
 ## 1. What this report shows
 
@@ -40,10 +40,10 @@ uv run python code/rgas/rgas_prediction.py \
 
 | tool | path | available | size_bytes | n_lines | sha256 |
 | --- | --- | --- | --- | --- | --- |
-| interproscan | r570_subsample_interpro.tsv | True | 5008 | 31 | 95bed53cd0c71e4ac4c1e318a2b0046a43ebaec58c9e6cb2e0e9ffb7fdabc344 |
+| interproscan | r570_subsample_interpro.tsv | True | 5008 | 31 | d44332d3d641078531dec4b9a3b9ddbf577ca612344464f17e0621b2b7eebd1d |
 | phobius | r570_subsample_phobius.tsv | True | 237 | 5 | ae3d00876262b6a2a6130086743bcd8e32d9f8e1a945a770511c5eac334be127 |
 | deeptmhmm | r570_subsample_deeptmhmm.gff3 | True | 1081 | 25 | 635653586030b35f8d02047502e86bd536dce9d9381a83e9d7ebcc39525d461a |
-| signalp | r570_subsample_signalp6_predictions.txt | True | 1299 | 6 | 49c48c18f06698e2615eb301c4be379564d64bdfdcb755ac068fcb94588722ca |
+| signalp | r570_subsample_signalp6_predictions.txt | True | 1299 | 6 | 6f2e428b7b948d1619bf523dba317320fd5d8ba3de045407f11a5b0e0fba5cbe |
 | deeploc | r570_subsample_deeploc2.csv | True | 1679 | 5 | 2534ee272eaeed0b86eced99feb43a8a0e6536e91cb98da2479eecc64bd859d3 |
 | deepcoil | deepcoil_data | True | 41630 | 4 | ca36d80d27cf1c454890f76e2196c36f54ab848a8ba1554162502834b934350b |
 

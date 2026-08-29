@@ -40,75 +40,79 @@ flowchart TB
     v3["channel.empty"]
     v4["chunk_size"]
     v13["ipr_dir"]
-    v16["deeploc2_models"]
-    v17["torch_cache"]
-    v20["signalp6_models"]
-    v23["deeptmhmm_weights"]
-    v38["channel.of"]
-    v46[" "]
-    v56["channel.of"]
+    v18["deeploc2_models"]
+    v19["torch_cache"]
+    v22["signalp6_models"]
+    v25["deeptmhmm_weights"]
+    v40["channel.of"]
+    v48[" "]
+    v58["channel.of"]
     end
     subgraph " "
     v1["versions"]
-    v6[" "]
-    v9[" "]
-    v44[" "]
-    v60[" "]
+    v8[" "]
+    v46[" "]
+    v62[" "]
     end
     subgraph "OMATHEUSPIMENTA_RGAPROFILER [OMATHEUSPIMENTA_RGAPROFILER]"
     subgraph "OMATHEUSPIMENTA_RGAPROFILER:RGAPROFILER [RGAPROFILER]"
     v5(["FASTA_QC"])
-    v8(["DEEPCOIL2"])
-    v11(["PHOBIUS"])
+    v7(["DEEPCOIL2"])
+    v10(["PHOBIUS"])
     v14(["INTERPROSCAN"])
-    v18(["DEEPLOC2"])
-    v21(["SIGNALP6"])
-    v24(["DEEPTMHMM"])
-    v33(["RGA_CLASSIFY"])
-    v43(["RGA_REPORT"])
-    v7(( ))
-    v26(( ))
+    v17(["INTERPROSCAN_MERGE"])
+    v20(["DEEPLOC2"])
+    v23(["SIGNALP6"])
+    v26(["DEEPTMHMM"])
+    v35(["RGA_CLASSIFY"])
+    v45(["RGA_REPORT"])
+    v6(( ))
+    v12(( ))
+    v16(( ))
+    v28(( ))
     end
     end
     v0 --> v1
     v2 --> v5
-    v3 --> v7
+    v3 --> v6
     v4 --> v5
-    v5 --> v8
-    v5 --> v6
-    v5 --> v11
-    v5 --> v14
-    v5 --> v18
-    v5 --> v21
-    v5 --> v24
     v5 --> v7
-    v8 --> v9
-    v8 --> v7
-    v8 --> v26
-    v11 --> v7
-    v11 --> v26
+    v5 --> v10
+    v5 --> v20
+    v5 --> v23
+    v5 --> v26
+    v5 --> v6
+    v5 --> v12
+    v7 --> v8
+    v7 --> v6
+    v7 --> v28
+    v10 --> v6
+    v10 --> v28
     v13 --> v14
-    v14 --> v7
-    v14 --> v26
-    v16 --> v18
-    v17 --> v18
-    v18 --> v7
-    v18 --> v26
-    v20 --> v21
-    v21 --> v7
-    v21 --> v26
-    v23 --> v24
-    v24 --> v7
-    v24 --> v26
-    v26 --> v33
-    v33 --> v7
-    v38 --> v7
-    v7 --> v43
-    v43 --> v44
-    v43 --> v7
-    v46 --> v7
-    v56 --> v7
-    v7 --> v60
+    v12 --> v14
+    v14 --> v6
+    v14 --> v16
+    v16 --> v17
+    v17 --> v28
+    v18 --> v20
+    v19 --> v20
+    v20 --> v6
+    v20 --> v28
+    v22 --> v23
+    v23 --> v6
+    v23 --> v28
+    v25 --> v26
+    v26 --> v6
+    v26 --> v28
+    v28 --> v35
+    v35 --> v6
+    v40 --> v6
+    v6 --> v45
+    v45 --> v46
+    v45 --> v6
+    v48 --> v6
+    v58 --> v6
+    v6 --> v62
 
 </pre>
 <script type="module">

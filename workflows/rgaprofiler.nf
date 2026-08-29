@@ -7,15 +7,16 @@ include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_rgaprofiler_pipeline'
 
-include { FASTA_QC     } from '../modules/local/fasta_qc'
-include { DEEPCOIL2    } from '../modules/local/deepcoil2'
-include { PHOBIUS      } from '../modules/local/phobius'
-include { INTERPROSCAN } from '../modules/local/interproscan'
-include { DEEPLOC2     } from '../modules/local/deeploc2'
-include { SIGNALP6     } from '../modules/local/signalp6'
-include { DEEPTMHMM    } from '../modules/local/deeptmhmm'
-include { RGA_CLASSIFY } from '../modules/local/rga_classify'
-include { RGA_REPORT   } from '../modules/local/rga_report'
+include { FASTA_QC           } from '../modules/local/fasta_qc'
+include { DEEPCOIL2          } from '../modules/local/deepcoil2'
+include { PHOBIUS            } from '../modules/local/phobius'
+include { INTERPROSCAN       } from '../modules/local/interproscan'
+include { INTERPROSCAN_MERGE } from '../modules/local/interproscan_merge'
+include { DEEPLOC2           } from '../modules/local/deeploc2'
+include { SIGNALP6           } from '../modules/local/signalp6'
+include { DEEPTMHMM          } from '../modules/local/deeptmhmm'
+include { RGA_CLASSIFY       } from '../modules/local/rga_classify'
+include { RGA_REPORT         } from '../modules/local/rga_report'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -55,15 +56,33 @@ workflow RGAPROFILER {
     def deeploc2_models = file("${params.softwares_dir}/DeepLoc2/DeepLoc2/models", checkIfExists: true)
     def deeploc2_torch_cache = file("${params.softwares_dir}/DeepLoc2/torch_cache", checkIfExists: true)
 
+    // SignalP6 has no runtime --device flag: GPU vs CPU is baked into the weight files
+    // themselves (see modules/local/signalp6 and docs/software-setup.md), so — unlike
+    // every other GPU-capable tool here, where the same staged weights work either way —
+    // which *directory* of weights to stage has to be decided here, before the
+    // channel/task is even built. This mirrors the exact GPU-resolution logic in
+    // conf/base.config's process_gpu label (see that file's comment for why it must be
+    // resolved lazily and not via a params.* value); the two must stay in sync.
+    def signalp6_use_gpu
+    if (params.use_gpu == 'auto') {
+        def gpu_probe = ["bash", "${projectDir}/bin/detect_gpu.sh"].execute()
+        signalp6_use_gpu = (gpu_probe.waitFor() == 0)
+    } else {
+        signalp6_use_gpu = (params.use_gpu == 'true')
+    }
+    def signalp6_models_subdir = signalp6_use_gpu ? 'models_gpu' : 'models'
+
     // Check SignalP6's DTU model weights are present (see bin/check_software_present.sh
-    // and docs/software-setup.md).
-    def signalp6_check = ["${projectDir}/bin/check_software_present.sh", "signalp6", params.softwares_dir].execute()
+    // and docs/software-setup.md). Passing signalp6_use_gpu makes the GPU-converted copy
+    // a hard requirement (not just an optional extra) whenever GPU execution was actually
+    // requested/detected, with a message telling the user exactly how to produce it.
+    def signalp6_check = ["${projectDir}/bin/check_software_present.sh", "signalp6", params.softwares_dir, signalp6_use_gpu.toString()].execute()
     signalp6_check.waitFor()
     if (signalp6_check.exitValue() != 0) {
         log.error(signalp6_check.err.text)
         exit 1, "ERROR: SignalP6 model weights under ${params.softwares_dir}/SignalP6 are incomplete. See message above."
     }
-    def signalp6_models = file("${params.softwares_dir}/SignalP6/signalp-6-package/models", checkIfExists: true)
+    def signalp6_models = file("${params.softwares_dir}/SignalP6/signalp-6-package/${signalp6_models_subdir}", checkIfExists: true)
 
     // Check DeepTMHMM's DTU/BioLib model weights are present (see bin/check_software_present.sh
     // and docs/software-setup.md). CC BY-NC-SA 4.0 -- academic/non-commercial use only.
@@ -80,8 +99,9 @@ workflow RGAPROFILER {
     //
     // Clean the input FASTA (dedup, strip stop-codon '*', uppercase) before handing
     // it to any prediction tool — real proteome FASTAs need this (e.g. trailing '*'
-    // breaks Phobius/InterProScan). Chunk output is produced but not yet consumed;
-    // per-tool parallel fan-out over chunks is a Stage 5 design decision.
+    // breaks Phobius/InterProScan). Chunk output feeds INTERPROSCAN's fan-out below;
+    // no other tool consumes it (InterProScan alone gets a clear, measured benefit
+    // from being split into many smaller jobs rather than one giant one).
     //
     FASTA_QC(ch_samplesheet, params.fasta_qc_chunk_size)
     ch_versions = ch_versions.mix(FASTA_QC.out.versions)
@@ -95,8 +115,20 @@ workflow RGAPROFILER {
     PHOBIUS(FASTA_QC.out.fasta)
     ch_versions = ch_versions.mix(PHOBIUS.out.versions)
 
-    INTERPROSCAN(FASTA_QC.out.fasta, ipr_dir)
+    //
+    // InterProScan scales much better as many smaller parallel jobs than one huge
+    // single-FASTA job, so (unlike every other tool here) it runs once per FASTA_QC
+    // chunk (.transpose() turns FASTA_QC's one-row-per-sample [meta, [chunk1,chunk2,...]]
+    // into one row per chunk: [meta, chunk1], [meta, chunk2], ...), then INTERPROSCAN_MERGE
+    // concatenates the per-chunk TSVs back into one file per sample (InterProScan's TSV
+    // format has no header row, confirmed against a real run, so plain concatenation is
+    // an exact, lossless merge) — nothing downstream needs to know chunking happened.
+    //
+    def ch_ipr_chunks = FASTA_QC.out.chunks.transpose()
+    INTERPROSCAN(ch_ipr_chunks, ipr_dir)
     ch_versions = ch_versions.mix(INTERPROSCAN.out.versions)
+
+    INTERPROSCAN_MERGE(INTERPROSCAN.out.tsv.groupTuple())
 
     DEEPLOC2(FASTA_QC.out.fasta, deeploc2_models, deeploc2_torch_cache)
     ch_versions = ch_versions.mix(DEEPLOC2.out.versions)
@@ -118,7 +150,7 @@ workflow RGAPROFILER {
     def ch_signalp6_predictions = SIGNALP6.out.predictions
         .map { meta, files -> [ meta, files.find { it.toString().contains('_predictions.txt') } ] }
 
-    def ch_rga_classify_input = INTERPROSCAN.out.tsv
+    def ch_rga_classify_input = INTERPROSCAN_MERGE.out.tsv
         .join(PHOBIUS.out.predictions)
         .join(ch_deeptmhmm_gff3)
         .join(ch_signalp6_predictions)

@@ -67,6 +67,12 @@ checkpoints (deeptmhmm_cv_0..4.model) and the 3 ESM1b weight files
         ;;
     signalp6)
         tool_dir="${base_dir}/SignalP6/signalp-6-package/models"
+        gpu_dir="${base_dir}/SignalP6/signalp-6-package/models_gpu"
+        # 3rd arg: whether GPU execution was requested/detected for this run (see
+        # workflows/rgaprofiler.nf). SignalP6 has no runtime --device flag -- GPU vs CPU
+        # is baked into the weight files themselves -- so a *separate*, GPU-converted
+        # copy of the weights is only required when GPU is actually in play.
+        use_gpu="${3:-false}"
         # This pipeline defaults to --mode slow-sequential (see modules/local/signalp6),
         # since it's the only mode whose weights are actually distributed/installed
         # in this repo's softwares/ -- so its weight set is required, not optional.
@@ -82,6 +88,23 @@ Download the SignalP 6.0 package from:
 and place its models/ directory contents (at least the 'slow-sequential' mode's
 sequential_models_signalp6/ weights) under:
   ${tool_dir}/"
+        if [ "${use_gpu}" = "true" ]; then
+            require "${gpu_dir}/sequential_models_signalp6"
+            help_msg="${help_msg}
+
+GPU execution is requested/detected for this run. SignalP6 has no runtime --device
+flag -- GPU vs CPU is baked into the weight files themselves -- so it needs a
+*separate*, GPU-converted copy of the weights above, at ${gpu_dir}/.
+One-time setup (run once, from the signalp6 image so signalp6_convert_models and
+its Python dependencies are available):
+  docker run --rm -v \"\$(pwd)/${base_dir}/SignalP6\":/data quay.io/signalp6:baseline bash -c '
+      cp -r /data/signalp-6-package/models /data/signalp-6-package/models_gpu &&
+      signalp6_convert_models gpu /data/signalp-6-package/models_gpu
+  '
+This copies the CPU weights first so the original models/ is left untouched, then
+converts the copy in place. See docs/software-setup.md. (Or pass --use_gpu false to
+run on CPU instead -- slower, but needs no extra setup.)"
+        fi
         ;;
     deeploc2)
         tool_dir="${base_dir}/DeepLoc2/DeepLoc2/models"

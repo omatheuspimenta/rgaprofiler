@@ -19,3 +19,8 @@ softwares/
 # and a practical run/test cheat-sheet) -- not part of the published repo.
 PLAN.md
 ORIENTATIONS.md
+
+# Maintainer-only docs: internal hygiene checklist and Docker-image publishing mechanics.
+# Not something end users running the pipeline need to see.
+docs/softwares-cleanup-checklist.md
+docs/publishing-docker-images.md

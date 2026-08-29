@@ -12,7 +12,7 @@
     "show_hidden": false,
     "version": false,
     "pipelines_testdata_base_path": "https://raw.githubusercontent.com/nf-core/test-datasets/rgaprofiler/",
-    "trace_report_suffix": "2026-08-28_18-58-21",
+    "trace_report_suffix": "2026-08-28_23-08-19",
     "config_profile_name": null,
     "config_profile_description": null,
     "custom_config_version": "master",

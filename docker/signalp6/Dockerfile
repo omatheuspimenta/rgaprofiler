@@ -24,9 +24,14 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DEFAULT_TIMEOUT=1000
 
 # procps (for `ps`) is required by Nextflow itself to collect task resource
-# metrics inside the container.
+# metrics inside the container. zip/unzip are required by the vendored
+# signalp6_convert_models script (see docs/software-setup.md's GPU conversion
+# step) -- it unzips a checkpoint's TorchScript archive, patches it, then
+# re-zips it; without these it fails with "command not found" partway through.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         procps \
+        zip \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Pinned to the real, working `signalp6` conda env on this host (confirmed to

@@ -1,0 +1,33 @@
+nextflow_process {
+
+    name "Test Process INTERPROSCAN_MERGE"
+    script "../main.nf"
+    process "INTERPROSCAN_MERGE"
+
+    test("Merges two per-chunk TSVs (no header row, so plain concatenation) into one") {
+        when {
+            process {
+                """
+                def chunk1 = file("\${workDir}/chunk1_interpro.tsv")
+                chunk1.text = "SoffiXsponR570.7os1g018900.1.p\\tMD5A\\t76\\tPfam\\tPF00001\\tDomain one\\t1\\t28\\t1.0E-5\\tT\\t01-01-2026\\t-\\t-\\t-\\t-\\n"
+                def chunk2 = file("\${workDir}/chunk2_interpro.tsv")
+                chunk2.text = "SoffiXsponR570.10Eg022100.1.p\\tMD5B\\t1160\\tPfam\\tPF00931\\tNB-ARC domain\\t202\\t371\\t3.1E-6\\tT\\t01-01-2026\\tIPR002182\\tNB-ARC\\t-\\t-\\n"
+
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ], // meta
+                    [ chunk1, chunk2 ]
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def merged = process.out.tsv[0][1]
+            def lines = file(merged).readLines()
+            assert lines.size() == 2
+            assert lines[0].contains('7os1g018900')
+            assert lines[1].contains('10Eg022100')
+        }
+    }
+}

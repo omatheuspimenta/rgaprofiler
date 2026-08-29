@@ -4,49 +4,41 @@
 
 ## Introduction
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+This pipeline predicts RGAs (Resistance Gene Analogs) in plant proteomes — it takes one
+or more protein FASTA files, not sequencing reads. See the main [`README.md`](../README.md)
+for a description of what it does and [`docs/output.md`](output.md) for what it produces.
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+You will need to create a samplesheet listing the protein FASTA file(s) you'd like to
+analyse before running the pipeline. It's a comma-separated file with exactly 2 columns
+and a header row, as shown below.
 
 ```bash
 --input '[path to samplesheet file]'
 ```
 
-### Multiple runs of the same sample
-
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
-
 ```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
+sample,fasta
+R570,/absolute/path/to/R570.protein.fasta
+another_sample,/absolute/path/to/another_sample.protein.fasta
 ```
 
-### Full samplesheet
+| Column   | Description                                                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample` | Custom sample name, used to label this run's outputs (e.g. `<sample>_interpro.tsv`). Spaces are automatically converted to underscores. |
+| `fasta`  | Full path to a protein FASTA file for this sample. Must exist and end in `.fa`/`.fasta` (optionally gzipped, e.g. `.fasta.gz`).          |
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+Unlike read-based nf-core pipelines, there's no concept of "multiple runs of the same
+sample" here (no lanes to concatenate) — one row is one FASTA to profile. If you have
+multiple FASTA files that should be treated as a single proteome, concatenate them
+yourself before listing the result as one row.
 
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
-
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
-```
-
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+**Important**: use an **absolute path** in the `fasta` column, not a relative one.
+Nextflow resolves a relative path in the samplesheet against the directory you *launch*
+`nextflow run` from, not against wherever `samplesheet.csv` itself lives — a relative
+path that looks correct can silently fail to resolve if you run the pipeline from a
+different directory than the one you wrote the samplesheet in.
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
@@ -55,8 +47,16 @@ An [example samplesheet](../assets/samplesheet.csv) has been provided with the p
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run omatheuspimenta/rgaprofiler --input ./samplesheet.csv --outdir ./results  -profile docker
+nextflow run omatheuspimenta/rgaprofiler \
+    --input ./samplesheet.csv \
+    --interproscan_db /path/to/interproscan-5.XX-YY.0 \
+    --outdir ./results \
+    -profile docker
 ```
+
+`--interproscan_db` has no default (it varies per install) and is always required. Several
+tools also need license-gated model weights/databases you supply yourself under
+`--softwares_dir` (default `./softwares`) — see [`docs/software-setup.md`](software-setup.md).
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
@@ -153,6 +153,8 @@ If `-profile` is not specified, the pipeline will run locally and expect all sof
   - A generic configuration profile to enable [Wave](https://seqera.io/wave/) containers. Use together with one of the above (requires Nextflow `24.03.0-edge` or later).
 - `conda`
   - A generic configuration profile to be used with [Conda](https://conda.io/docs/). Please only use Conda as a last resort i.e. when it's not possible to run the pipeline with Docker, Singularity, Podman, Shifter, Charliecloud, or Apptainer.
+- `long_running`
+  - This pipeline-specific profile (not part of the standard nf-core set) raises every process's time budget to 1–10 days, sized for a real, full-scale proteome rather than the small test dataset. Slow steps (InterProScan, SignalP6, …) can otherwise be killed for running "too long" on real data. Add it alongside your other profiles, e.g. `-profile docker,long_running` — no config file editing needed. See `conf/long_running.config` if you need to raise the numbers even further.
 
 ### `-resume`
 

@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/yaml-schema.json
+name: interproscan_merge
+description: Concatenate per-chunk InterProScan TSV outputs back into one file per sample
+keywords:
+  - interproscan
+  - merge
+  - chunking
+tools:
+  - cat:
+      description: |
+        Plain concatenation -- InterProScan's TSV output format has no header row, so
+        concatenating per-chunk TSVs is an exact, lossless merge back to what a single
+        non-chunked run would have produced.
+      homepage: https://www.gnu.org/software/coreutils/
+      documentation: https://www.gnu.org/software/coreutils/
+      licence: ["GPL-3.0-or-later"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - tsvs:
+        type: file
+        description: One InterProScan TSV per FASTA_QC chunk for this sample
+        pattern: "*.tsv"
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - "*_interpro.tsv":
+          type: file
+          description: All chunks' InterProScan hits merged into a single per-sample TSV
+          pattern: "*_interpro.tsv"
+authors:
+  - "@omatheuspimenta"
+maintainers:
+  - "@omatheuspimenta"

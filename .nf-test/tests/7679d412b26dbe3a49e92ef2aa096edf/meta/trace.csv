@@ -1,2 +1,2 @@
 task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-1	a6/8d6da9	31098	INTERPROSCAN (rga_test)	COMPLETED	0	2026-08-28 18:25:50.535	2m 1s	2m	275.6%	5 GB	27.1 GB	10.2 GB	277.5 MB
+1	3a/cc24d6	1635954	INTERPROSCAN (rga_test)	COMPLETED	0	2026-08-28 22:59:09.391	2m 48s	2m 47s	206.1%	5.6 GB	27.7 GB	10.2 GB	277.5 MB
