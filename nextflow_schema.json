@@ -72,10 +72,17 @@
                     "type": "integer",
                     "default": 5000,
                     "minimum": 1,
-                    "description": "Number of sequences per chunk when FASTA_QC splits the cleaned input FASTA.",
-                    "help_text": "FASTA_QC always cleans the input (dedup, strip stop-codon '*', uppercase) and additionally splits the result into chunks of this size. Chunk output isn't consumed by any process yet — per-tool parallel fan-out over chunks is a later design decision — so this default is provisional and likely to be revisited.",
+                    "description": "Number of sequences per chunk when FASTA_QC splits the cleaned input FASTA. Ignored when --num_blocks is set.",
+                    "help_text": "FASTA_QC always cleans the input (dedup, strip stop-codon '*', uppercase) and additionally splits the result into chunks, which DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each fan out over (one task per chunk, merged back into one result per sample afterwards). This parameter fixes the number of sequences in each chunk, so the resulting chunk count scales with input size; use --num_blocks instead to fix the chunk count directly.",
                     "fa_icon": "fas fa-layer-group",
                     "hidden": true
+                },
+                "num_blocks": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of sequence blocks/chunks to split each sample's input FASTA into (e.g. --num_blocks 1000), for DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM to each fan out over.",
+                    "help_text": "Overrides --fasta_qc_chunk_size's fixed sequences-per-chunk sizing with a fixed chunk *count* instead: FASTA_QC splits the cleaned input into (up to) this many chunks, balanced as evenly as possible by sequence count but not guaranteed exactly equal. DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM then each run once per chunk instead of once per whole proteome -- important for DeepCoil2 in particular, which can fail or become impractical on a very large proteome in a single task. A larger value produces more, smaller, independent tasks for Nextflow's executor to schedule in parallel (subject to its own resource/executor configuration) -- it does not itself force that many tasks to run at once. Leave unset to keep splitting by --fasta_qc_chunk_size instead.",
+                    "fa_icon": "fas fa-layer-group"
                 }
             }
         },

@@ -10,18 +10,18 @@ Every prediction-tool directory is named after the process's first underscore-to
 
 The pipeline takes a protein FASTA per sample and:
 
-1. Cleans/deduplicates it and splits it into chunks ([FASTA_QC](#fasta_qc)).
-2. Runs six independent protein-prediction tools against the cleaned FASTA in parallel: [DeepCoil2](#deepcoil2) (coiled-coil domains), [Phobius](#phobius) (signal peptides + TM topology), [InterProScan](#interproscan) (protein domains/functional annotation), [DeepLoc2](#deeploc2) (subcellular localization), [SignalP6](#signalp6) (signal peptides), [DeepTMHMM](#deeptmhmm) (transmembrane helices).
+1. Cleans/deduplicates it and splits it into sequence blocks/chunks ([FASTA_QC](#fasta_qc)).
+2. Runs six independent protein-prediction tools against the cleaned FASTA: [DeepCoil2](#deepcoil2) (coiled-coil domains), [Phobius](#phobius) (signal peptides + TM topology), [InterProScan](#interproscan) (protein domains/functional annotation), [DeepLoc2](#deeploc2) (subcellular localization), [SignalP6](#signalp6) (signal peptides), [DeepTMHMM](#deeptmhmm) (transmembrane helices). Five of these six — every one except Phobius — run once per FASTA_QC chunk rather than once on the whole proteome, then have their own `*_MERGE` step reassemble the per-chunk outputs into one result per sample (see [FASTA_QC](#fasta_qc) below).
 3. Combines all six tools' outputs into per-protein RGA (Resistance Gene Analog) classifications ([RGA classification](#rga-classification)), using the classification logic from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor).
 4. Renders a self-contained HTML summary of those classifications ([Summary report](#summary-report)).
 
 ```
-input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
-                              ├─ Phobius ──────┤
-                              ├─ InterProScan ─┼──▶ RGA_CLASSIFY ──▶ RGA_REPORT
-                              ├─ DeepLoc2 ─────┤
-                              ├─ SignalP6 ─────┤
-                              └─ DeepTMHMM ────┘
+                              ┌─ DeepCoil2 ────▶ DeepCoil2_MERGE ─────┐
+                              ├─ Phobius ─────────────────────────────┤
+input.fasta ──▶ FASTA_QC ──▶ ├─ InterProScan ─▶ InterProScan_MERGE ──┼──▶ RGA_CLASSIFY ──▶ RGA_REPORT
+                              ├─ DeepLoc2 ─────▶ DeepLoc2_MERGE ──────┤
+                              ├─ SignalP6 ─────▶ SignalP6_MERGE ──────┤
+                              └─ DeepTMHMM ────▶ DeepTMHMM_MERGE ─────┘
 ```
 
 ### FASTA_QC
@@ -30,8 +30,12 @@ input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
 <summary>Output files</summary>
 
 - `fasta/`
-  - `<sample>_clean.fasta`: the input FASTA after deduplication, stripping the trailing stop codon (`*`) some proteomes ship, and uppercasing — this cleaned file is what every downstream tool actually receives.
-  - `<sample>_clean_chunks/<sample>_clean.part_NNN.fasta.fasta`: the same cleaned sequences split into chunks of `--fasta_qc_chunk_size` (default 5000) sequences each. Not consumed by any process yet — parallel fan-out over chunks is a possible future optimisation, not part of this pipeline's current design.
+  - `<sample>_clean.fasta`: the input FASTA after deduplication, stripping the trailing stop codon (`*`) some proteomes ship, and uppercasing — this cleaned file is what every downstream tool actually receives (directly, for Phobius; split into chunks, for the other five tools below).
+  - `<sample>_clean_chunks/<sample>_clean.part_NNN.fasta.fasta`: the same cleaned sequences split into chunks — complete FASTA records only, never an arbitrary line split. DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each run once per chunk (their own `*_MERGE` process then reassembles the per-chunk results into one file/directory per sample, published under each tool's own output directory below — chunking is otherwise invisible downstream).
+
+  Chunk count/size is controlled by one of two mutually exclusive parameters:
+  - `--num_blocks <N>` (e.g. `--num_blocks 1000`): split into (up to) `N` chunks, balanced as evenly as possible by sequence count. Not hard-coded — set as high as needed for a very large proteome (this is what keeps DeepCoil2 in particular from ever having to process an entire proteome as a single task). A higher value gives Nextflow's executor more independent, smaller tasks to schedule in parallel; it does not itself force that many tasks to run concurrently — that remains governed by your `-profile`/executor/resource configuration.
+  - `--fasta_qc_chunk_size <N>` (default `5000`, used only when `--num_blocks` is unset): a fixed number of sequences per chunk instead, so the chunk *count* scales with input size.
 
 </details>
 
@@ -45,7 +49,7 @@ input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
 
 </details>
 
-[DeepCoil2](https://github.com/labstructbioinf/DeepCoil) predicts coiled-coil domains. GPU-capable (`--use_gpu`, see [usage docs](../README.md#usage)).
+[DeepCoil2](https://github.com/labstructbioinf/DeepCoil) predicts coiled-coil domains. GPU-capable (`--use_gpu`, see [usage docs](../README.md#usage)). Runs once per FASTA_QC chunk (`--num_blocks`/`--fasta_qc_chunk_size`, see [FASTA_QC](#fasta_qc)) — every input sequence appears in exactly one chunk's `.out` file, so `DeepCoil2_MERGE` just collects them into the single `results/` directory published here.
 
 ### Phobius
 
@@ -67,7 +71,7 @@ input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
 
 </details>
 
-[InterProScan](https://www.ebi.ac.uk/interpro/about/interproscan/) does protein domain/functional-site annotation. CPU-only. Requires a pre-downloaded database (`--interproscan_db`, see [`docs/software-setup.md`](software-setup.md)); by design this pipeline's committed reference runs did **not** enable the licensed Phobius/SignalP-4.1/TMHMM-2.0c sub-analyses within InterProScan itself — those signals come from this pipeline's own dedicated Phobius/SignalP6/DeepTMHMM modules instead.
+[InterProScan](https://www.ebi.ac.uk/interpro/about/interproscan/) does protein domain/functional-site annotation. CPU-only. Requires a pre-downloaded database (`--interproscan_db`, see [`docs/software-setup.md`](software-setup.md)); by design this pipeline's committed reference runs did **not** enable the licensed Phobius/SignalP-4.1/TMHMM-2.0c sub-analyses within InterProScan itself — those signals come from this pipeline's own dedicated Phobius/SignalP6/DeepTMHMM modules instead. Like DeepCoil2, runs once per FASTA_QC chunk; `InterProScan_MERGE` concatenates the per-chunk TSVs (no header row) into the single file published here.
 
 ### DeepLoc2
 
@@ -78,7 +82,7 @@ input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
 
 </details>
 
-[DeepLoc2](https://services.healthtech.dtu.dk/services/DeepLoc-2.1/) predicts subcellular localization. GPU-capable (`--use_gpu`); runs the "Fast" model by default.
+[DeepLoc2](https://services.healthtech.dtu.dk/services/DeepLoc-2.1/) predicts subcellular localization. GPU-capable (`--use_gpu`); runs the "Fast" model by default. Runs once per FASTA_QC chunk; `DeepLoc2_MERGE` keeps the first chunk's CSV header and concatenates every chunk's data rows into the single file published here.
 
 ### SignalP6
 
@@ -88,12 +92,12 @@ input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
 - `signalp6/results/`
   - `<sample>_signalp6_predictions.txt`: per-protein predicted signal-peptide type (Sec/SPI, Sec/SPII, Tat/SPI, …) and cleavage-site position/probability.
   - `<sample>_signalp6.gff3` / `region_output.gff3`: the same calls in GFF3 form.
-  - `output.json`: full per-residue probability output.
-  - `processed_entries.fasta`: the exact sequences SignalP6 scored (post its own internal filtering).
+  - `chunk_N_output.json`: full per-residue probability output, one file per FASTA_QC chunk (a per-chunk JSON object, not a per-protein list, so it has no lossless line-level merge across chunks — every chunk's copy is kept individually rather than dropped or naively concatenated into invalid JSON).
+  - `processed_entries.fasta`: the exact sequences SignalP6 scored (post its own internal filtering), across every chunk.
 
 </details>
 
-[SignalP6](https://github.com/fteufel/signalp-6.0) predicts signal peptides (all five types). Runs in `slow-sequential` mode by default (the only weight set this pipeline's reference `softwares/SignalP6/` install ships). GPU-capability is a property of which weight files are staged, not a CLI flag — see [`docs/software-setup.md`](software-setup.md).
+[SignalP6](https://github.com/fteufel/signalp-6.0) predicts signal peptides (all five types). Runs in `slow-sequential` mode by default (the only weight set this pipeline's reference `softwares/SignalP6/` install ships). GPU-capability is a property of which weight files are staged, not a CLI flag — see [`docs/software-setup.md`](software-setup.md). Runs once per FASTA_QC chunk; `SignalP6_MERGE` reassembles `_predictions.txt`/`.gff3`/`region_output.gff3` (keeping one shared header, then every chunk's data rows/blocks) and concatenates `processed_entries.fasta`, into the files published here.
 
 ### DeepTMHMM
 
@@ -103,12 +107,12 @@ input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
 - `deeptmhmm/results/`
   - `<sample>_deeptmhmm.gff3`: per-protein predicted region boundaries (signal peptide / inside / outside / transmembrane helix / beta-barrel strand).
   - `<sample>_predicted_topologies.3line`: the same topology calls in DeepTMHMM's compact three-line-per-protein format.
-  - `deeptmhmm_results.md`: a short run summary.
-  - `embeddings/`, `probabilities/`: intermediate per-protein ESM1b embeddings and per-residue class probabilities.
+  - `summaries/chunk_N_deeptmhmm_results.md`: a short run summary, one per FASTA_QC chunk.
+  - `embeddings/`, `probabilities/`: intermediate per-protein ESM1b embeddings and per-residue class probabilities, collected across every chunk.
 
 </details>
 
-[DeepTMHMM](https://dtu.biolib.com/DeepTMHMM) predicts alpha/beta transmembrane topology. GPU-capable — auto-detects `torch.cuda.is_available()` with no CLI flag needed, driven by the same `--use_gpu` setting as the other GPU-capable tools.
+[DeepTMHMM](https://dtu.biolib.com/DeepTMHMM) predicts alpha/beta transmembrane topology. GPU-capable — auto-detects `torch.cuda.is_available()` with no CLI flag needed, driven by the same `--use_gpu` setting as the other GPU-capable tools. Runs once per FASTA_QC chunk; `DeepTMHMM_MERGE` keeps one shared GFF3 header, concatenates the per-chunk blocks/records, and collects the embeddings/probabilities into the files published here.
 
 ### RGA classification
 

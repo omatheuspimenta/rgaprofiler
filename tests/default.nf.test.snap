@@ -45,7 +45,6 @@
                 "deeploc2/results/r570_subsample_deeploc2.csv",
                 "deeptmhmm",
                 "deeptmhmm/results",
-                "deeptmhmm/results/deeptmhmm_results.md",
                 "deeptmhmm/results/embeddings",
                 "deeptmhmm/results/embeddings/12b46762e2f9c045126a3b7b0de6f981",
                 "deeptmhmm/results/embeddings/3f5597f4d4931910925d40bd5e73f88a",
@@ -54,6 +53,8 @@
                 "deeptmhmm/results/probabilities",
                 "deeptmhmm/results/r570_subsample_deeptmhmm.gff3",
                 "deeptmhmm/results/r570_subsample_predicted_topologies.3line",
+                "deeptmhmm/results/summaries",
+                "deeptmhmm/results/summaries/chunk_1_deeptmhmm_results.md",
                 "fasta",
                 "fasta/r570_subsample_clean.fasta",
                 "fasta/r570_subsample_clean_chunks",
@@ -84,7 +85,7 @@
                 "rga/rga_out/unmatched_ids_report.tsv",
                 "signalp6",
                 "signalp6/results",
-                "signalp6/results/output.json",
+                "signalp6/results/chunk_1_output.json",
                 "signalp6/results/processed_entries.fasta",
                 "signalp6/results/r570_subsample_signalp6.gff3",
                 "signalp6/results/r570_subsample_signalp6_predictions.txt",
@@ -99,7 +100,7 @@
                 "r570_subsample_phobius.tsv:md5,24a82656589aaf4398282db15a33617c"
             ]
         ],
-        "timestamp": "2026-08-28T14:20:19.377288828",
+        "timestamp": "2026-08-29T18:59:36.689798697",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

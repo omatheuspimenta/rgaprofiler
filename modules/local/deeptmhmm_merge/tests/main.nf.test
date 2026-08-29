@@ -1,0 +1,77 @@
+nextflow_process {
+
+    name "Test Process DEEPTMHMM_MERGE"
+    script "../main.nf"
+    process "DEEPTMHMM_MERGE"
+
+    test("Merges two chunks' DeepTMHMM results into one result per sample, keeping one GFF3 header and every protein block") {
+        when {
+            process {
+                """
+                def prefix = 'r570_subsample'
+
+                def chunk1_dir = file("\${workDir}/chunk1_results")
+                chunk1_dir.mkdirs()
+                file("\${chunk1_dir}/\${prefix}_deeptmhmm.gff3").text =
+                    "##gff-version 3\\n" +
+                    "# Seq1 Length: 5\\n" +
+                    "# Seq1 Number of predicted TMRs: 0\\n" +
+                    "Seq1\\toutside\\t1\\t5\\n" +
+                    "//\\n"
+                file("\${chunk1_dir}/\${prefix}_predicted_topologies.3line").text =
+                    ">Seq1 | GLOB\\nMKVLY\\nOOOOO\\n"
+                file("\${chunk1_dir}/deeptmhmm_results.md").text = "# Run summary (chunk 1)\\n"
+                chunk1_dir.resolve('embeddings').mkdirs()
+                file("\${chunk1_dir}/embeddings/hash1").text = "embedding-data-1"
+                chunk1_dir.resolve('probabilities').mkdirs()
+                file("\${chunk1_dir}/probabilities/hash1").text = "prob-data-1"
+
+                def chunk2_dir = file("\${workDir}/chunk2_results")
+                chunk2_dir.mkdirs()
+                file("\${chunk2_dir}/\${prefix}_deeptmhmm.gff3").text =
+                    "##gff-version 3\\n" +
+                    "# Seq2 Length: 5\\n" +
+                    "# Seq2 Number of predicted TMRs: 1\\n" +
+                    "Seq2\\tTMhelix\\t1\\t5\\n" +
+                    "//\\n"
+                file("\${chunk2_dir}/\${prefix}_predicted_topologies.3line").text =
+                    ">Seq2 | TM\\nMKVLF\\nMMMMM\\n"
+                file("\${chunk2_dir}/deeptmhmm_results.md").text = "# Run summary (chunk 2)\\n"
+                chunk2_dir.resolve('embeddings').mkdirs()
+                file("\${chunk2_dir}/embeddings/hash2").text = "embedding-data-2"
+                chunk2_dir.resolve('probabilities').mkdirs()
+                file("\${chunk2_dir}/probabilities/hash2").text = "prob-data-2"
+
+                input[0] = [
+                    [ id:prefix, single_end:false ], // meta
+                    [ chunk1_dir, chunk2_dir ]
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def predictions = process.out.predictions[0][1]
+
+            def gff3 = predictions.find { it.toString().endsWith('_deeptmhmm.gff3') }
+            def gff3_lines = file(gff3).readLines()
+            assert gff3_lines.count { it == '##gff-version 3' } == 1 // header not duplicated
+            assert gff3_lines.any { it.contains('Seq1') }
+            assert gff3_lines.any { it.contains('Seq2') }
+
+            def threeline = predictions.find { it.toString().endsWith('.3line') }
+            def threeline_lines = file(threeline).readLines()
+            assert threeline_lines == ['>Seq1 | GLOB', 'MKVLY', 'OOOOO', '>Seq2 | TM', 'MKVLF', 'MMMMM']
+
+            def embeddings_dir = predictions.find { it.toString().endsWith('/embeddings') }
+            assert file(embeddings_dir).list().sort() == ['hash1', 'hash2']
+
+            def probabilities_dir = predictions.find { it.toString().endsWith('/probabilities') }
+            assert file(probabilities_dir).list().sort() == ['hash1', 'hash2']
+
+            def summaries_dir = predictions.find { it.toString().endsWith('/summaries') }
+            assert file(summaries_dir).list().sort() == ['chunk_1_deeptmhmm_results.md', 'chunk_2_deeptmhmm_results.md']
+        }
+    }
+}

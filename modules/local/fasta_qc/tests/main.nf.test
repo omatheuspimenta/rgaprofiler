@@ -25,7 +25,8 @@ nextflow_process {
                     [ id:'teste_qc', single_end:false ],
                     dirty_fasta
                 ]
-                input[1] = 2 
+                input[1] = 'size'
+                input[2] = 2
                 """
             }
         }
@@ -66,6 +67,60 @@ nextflow_process {
             assert chunk2_lines.contains(">Seq4")
             
             assert snapshot(process.out).match()
+        }
+    }
+
+    // Covers the 'parts' split mode (--num_blocks): requests an exact chunk *count*
+    // instead of a fixed sequences-per-chunk size, and every sequence must still end up
+    // in exactly one chunk -- no sequence lost, none duplicated, every FASTA record
+    // (header + sequence) intact.
+    test("'parts' mode (--num_blocks) splits into the requested chunk count, losing/duplicating nothing") {
+        when {
+            process {
+                """
+                def clean_fasta = file("\${workDir}/clean.fasta")
+                clean_fasta.text = '''\\
+                >Seq1
+                MKVLY
+                >Seq2
+                MKVLF
+                >Seq3
+                MKVLW
+                >Seq4
+                MKVLA
+                '''.stripIndent()
+
+                input[0] = [
+                    [ id:'teste_parts', single_end:false ],
+                    clean_fasta
+                ]
+                input[1] = 'parts'
+                input[2] = 4
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def chunks_strings = process.out.chunks[0][1]
+            assert chunks_strings instanceof List
+            assert chunks_strings.size() == 4 // exactly 4 blocks requested for 4 sequences
+
+            def chunk_files = chunks_strings.collect { file(it) }
+            def headers_seen = chunk_files.collect { it.readLines().findAll { l -> l.startsWith('>') } }.flatten()
+
+            // No sequence lost, none duplicated: every original header appears exactly once
+            // across all chunks combined.
+            assert headers_seen.sort() == ['>Seq1', '>Seq2', '>Seq3', '>Seq4']
+
+            // Every chunk is a complete, well-formed FASTA record (header immediately
+            // followed by its sequence line) -- not an arbitrary line split.
+            chunk_files.each { f ->
+                def lines = f.readLines()
+                assert lines.size() == 2
+                assert lines[0].startsWith('>')
+                assert lines[1] ==~ /[A-Z]+/
+            }
         }
     }
 }

@@ -146,6 +146,61 @@ To further assist in reproducibility, you can use share and reuse [parameter fil
 > [!TIP]
 > If you wish to share such profile (such as upload as supplementary material for academic publications), make sure to NOT include cluster specific paths to files, nor institutional specific profiles.
 
+## Sequence batching (`--num_blocks`)
+
+DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM don't run once against a
+sample's whole input FASTA — `FASTA_QC` first splits the cleaned FASTA into sequence
+blocks/chunks (always complete FASTA records, never an arbitrary line split), and each
+of those five tools runs once per chunk. Each tool's own `*_MERGE` process (e.g.
+`DEEPCOIL2_MERGE`) then reassembles the per-chunk outputs into one result per sample, so
+the final files under `--outdir` look the same either way — see
+[`docs/output.md`](output.md) for exactly how each tool's outputs are merged. Phobius
+alone still runs once per sample (it's fast and CPU-only).
+
+This matters most for **DeepCoil2**, which can fail outright or become impractical if
+forced to process an entire large proteome as a single task. Chunking keeps every task's
+input small regardless of how large the whole proteome is.
+
+Two mutually exclusive parameters control the chunking, both consumed by `FASTA_QC`:
+
+```bash
+--num_blocks 1000
+```
+
+- **`--num_blocks <N>`**: request a fixed **chunk count** — split into (up to) `N`
+  chunks, balanced as evenly as possible by sequence count (via `seqkit split2
+  --by-part`). If a proteome has fewer than `N` sequences, you get one chunk per
+  sequence, not `N` empty chunks. Not hard-coded anywhere in the pipeline — set it as
+  high as you need for a very large proteome. **This is the parameter to reach for on
+  real, full-scale data.**
+- **`--fasta_qc_chunk_size <N>`** (default `5000`, used only when `--num_blocks` is
+  unset): a fixed number of **sequences per chunk** instead — the resulting chunk count
+  scales with the input's sequence total. This is the pipeline's original chunking
+  parameter (previously only consumed by InterProScan); `--num_blocks` was added on top
+  of it and takes priority whenever both would apply.
+
+A larger `--num_blocks` gives Nextflow's executor more independent, smaller tasks to
+schedule in parallel — it does **not** force that many tasks to run simultaneously; how
+many actually run at once remains governed entirely by your `-profile`/executor/resource
+configuration (`process.cpus`/`memory`, `resourceLimits`, your scheduler's queue, etc.),
+exactly like every other process in this pipeline.
+
+```bash
+# Full-scale proteome, split into ~1000 independent chunks per sample
+nextflow run . \
+    -profile docker,long_running \
+    --input samplesheet.csv \
+    --interproscan_db /path/to/interproscan-5.XX-YY.0 \
+    --num_blocks 1000 \
+    --outdir results
+```
+
+The pipeline's own log output confirms batching took effect: right after startup it
+prints which of `--num_blocks`/`--fasta_qc_chunk_size` is in effect, and once `FASTA_QC`
+finishes for every sample it prints the actual resulting chunk count — look for the
+`Sequence batching:` lines. `--outdir/fasta/<sample>_clean_chunks/` also holds the chunk
+FASTA files themselves if you want to inspect them directly.
+
 ## Core Nextflow arguments
 
 > [!NOTE]

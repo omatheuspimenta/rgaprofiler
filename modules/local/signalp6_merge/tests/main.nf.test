@@ -1,0 +1,85 @@
+nextflow_process {
+
+    name "Test Process SIGNALP6_MERGE"
+    script "../main.nf"
+    process "SIGNALP6_MERGE"
+
+    test("Merges two chunks' SignalP6 results into one result per sample, keeping one header and every data row") {
+        when {
+            process {
+                """
+                def prefix = 'r570_subsample'
+
+                def chunk1_dir = file("\${workDir}/chunk1_results")
+                chunk1_dir.mkdirs()
+                file("\${chunk1_dir}/\${prefix}_signalp6_predictions.txt").text =
+                    "# SignalP-6.0\\tOrganism: Other\\tTimestamp: 1\\n" +
+                    "# ID\\tPrediction\\tOTHER\\tSP(Sec/SPI)\\n" +
+                    "Seq1\\tSP\\t0.0\\t1.0\\n"
+                file("\${chunk1_dir}/\${prefix}_signalp6.gff3").text =
+                    "## gff-version 3\\n" +
+                    "Seq1\\tSignalP-6.0\\tsignal_peptide\\t1\\t20\\t0.99\\t.\\t.\\t.\\n"
+                file("\${chunk1_dir}/region_output.gff3").text =
+                    "## gff-version 3\\n" +
+                    "Seq1\\tSignalP-6.0\\tregion\\t1\\t20\\t.\\t.\\t.\\t.\\n"
+                file("\${chunk1_dir}/processed_entries.fasta").text = ">Seq1\\nMKVLY\\n"
+                file("\${chunk1_dir}/output.json").text = '{"chunk":1}'
+
+                def chunk2_dir = file("\${workDir}/chunk2_results")
+                chunk2_dir.mkdirs()
+                file("\${chunk2_dir}/\${prefix}_signalp6_predictions.txt").text =
+                    "# SignalP-6.0\\tOrganism: Other\\tTimestamp: 1\\n" +
+                    "# ID\\tPrediction\\tOTHER\\tSP(Sec/SPI)\\n" +
+                    "Seq2\\tOTHER\\t1.0\\t0.0\\n"
+                file("\${chunk2_dir}/\${prefix}_signalp6.gff3").text =
+                    "## gff-version 3\\n" +
+                    "Seq2\\tSignalP-6.0\\tsignal_peptide\\t1\\t10\\t0.10\\t.\\t.\\t.\\n"
+                file("\${chunk2_dir}/region_output.gff3").text =
+                    "## gff-version 3\\n" +
+                    "Seq2\\tSignalP-6.0\\tregion\\t1\\t10\\t.\\t.\\t.\\t.\\n"
+                file("\${chunk2_dir}/processed_entries.fasta").text = ">Seq2\\nMKVLF\\n"
+                file("\${chunk2_dir}/output.json").text = '{"chunk":2}'
+
+                input[0] = [
+                    [ id:prefix, single_end:false ], // meta
+                    [ chunk1_dir, chunk2_dir ]
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def predictions = process.out.predictions[0][1]
+
+            def predictions_txt = predictions.find { it.toString().contains('_predictions.txt') }
+            def pred_lines = file(predictions_txt).readLines()
+            assert pred_lines.size() == 4 // 2-line header once + 2 data rows (one per chunk)
+            assert pred_lines[0].startsWith('# SignalP-6.0')
+            assert pred_lines.count { it.startsWith('# ') } == 2 // header not duplicated
+            assert pred_lines.any { it.startsWith('Seq1\tSP') }
+            assert pred_lines.any { it.startsWith('Seq2\tOTHER') }
+
+            def main_gff3 = predictions.find { it.toString().endsWith('_signalp6.gff3') }
+            def gff3_lines = file(main_gff3).readLines()
+            assert gff3_lines.count { it == '## gff-version 3' } == 1 // header not duplicated
+            assert gff3_lines.any { it.startsWith('Seq1') }
+            assert gff3_lines.any { it.startsWith('Seq2') }
+
+            def region_gff3 = predictions.find { it.toString().endsWith('region_output.gff3') }
+            def region_lines = file(region_gff3).readLines()
+            assert region_lines.count { it == '## gff-version 3' } == 1
+            assert region_lines.any { it.startsWith('Seq1') }
+            assert region_lines.any { it.startsWith('Seq2') }
+
+            def merged_fasta = predictions.find { it.toString().endsWith('processed_entries.fasta') }
+            def fasta_lines = file(merged_fasta).readLines()
+            assert fasta_lines == ['>Seq1', 'MKVLY', '>Seq2', 'MKVLF'] // complete FASTA records, both chunks
+
+            // Per-chunk JSON is kept individually (no lossy/invalid merge attempted)
+            def jsons = predictions.findAll { it.toString().endsWith('_output.json') }
+            assert jsons.size() == 2
+            assert jsons.collect { file(it).name }.sort() == ['chunk_1_output.json', 'chunk_2_output.json']
+        }
+    }
+}

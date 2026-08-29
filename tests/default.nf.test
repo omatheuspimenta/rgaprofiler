@@ -51,4 +51,79 @@ nextflow_pipeline {
             )
         }
     }
+
+    // --num_blocks forces DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM to
+    // fan out over many small chunks instead of the single whole-proteome chunk the
+    // "-profile test" run above ends up with (4 sequences < the 5000-sequence default
+    // fasta_qc_chunk_size). Set to 4 here -- one sequence per chunk, the most extreme
+    // case -- to prove chunking end to end: every chunked tool's own *_MERGE step must
+    // reassemble all 4 proteins with none lost or duplicated, and the final RGA
+    // classification must still cover the same 4 proteins as the unchunked run above.
+    test("-profile test --num_blocks 4") {
+
+        when {
+            def abs_samplesheet = file("${launchDir}/samplesheet_test_abs.csv")
+            abs_samplesheet.text = "sample,fasta\nr570_subsample,${projectDir}/tests/testdata/r570_subsample.fasta\n"
+
+            params {
+                outdir           = "$outputDir"
+                input            = abs_samplesheet.toString()
+                interproscan_db  = "${projectDir}/softwares/InterProScan/interproscan-5.78-109.0"
+                num_blocks       = 4
+            }
+        }
+
+        then {
+            assert workflow.success
+
+            def all_ids = [
+                'SoffiXsponR570.7os1g018900.1.p',
+                'SoffiXsponR570.7os1g005900.1.p',
+                'SoffiXsponR570.09Cg101200.1.p',
+                'SoffiXsponR570.10Eg022100.1.p',
+            ]
+
+            // FASTA_QC actually produced 4 chunks -- --num_blocks was accepted and
+            // propagated, not silently ignored.
+            def chunk_dir = file("${outputDir}/fasta/r570_subsample_clean_chunks")
+            assert chunk_dir.list().size() == 4
+
+            // DeepCoil2: one chunk per protein means DeepCoil2 itself never sees more
+            // than one sequence at a time -- confirm DEEPCOIL2_MERGE still recovered a
+            // complete, non-duplicated .out file per protein.
+            def deepcoil2_dir = file("${outputDir}/deepcoil2/results")
+            def deepcoil2_files = deepcoil2_dir.list()
+            assert deepcoil2_files.size() == 4
+            assert all_ids.every { id -> deepcoil2_files.any { it.contains(id.replaceAll('[._]', '')) } }
+
+            // InterProScan: merged TSV has a hit row for every one of the 4 proteins
+            // (the RGA-positive SoffiXsponR570.10Eg022100.1.p alone contributes several
+            // domain hits, so assert protein coverage via distinct first-column IDs
+            // rather than an exact row count).
+            def ipr_ids = file("${outputDir}/interproscan/r570_subsample_interpro.tsv").readLines()
+                .collect { it.tokenize('\t')[0] }.unique()
+            assert all_ids.every { id -> ipr_ids.contains(id) }
+
+            // DeepLoc2/SignalP6/DeepTMHMM: one merged row/record per protein, header
+            // not duplicated, nothing lost.
+            def deeploc2_lines = file("${outputDir}/deeploc2/results/r570_subsample_deeploc2.csv").readLines()
+            assert deeploc2_lines.size() == 5 // 1 header + 4 proteins
+            assert all_ids.every { id -> deeploc2_lines.any { it.startsWith("${id},") } }
+
+            def signalp6_lines = file("${outputDir}/signalp6/results/r570_subsample_signalp6_predictions.txt").readLines()
+            assert signalp6_lines.count { it.startsWith('# ') } == 2 // 2-line header, not duplicated per chunk
+            assert all_ids.every { id -> signalp6_lines.any { it.startsWith(id) } }
+
+            def deeptmhmm_gff3_lines = file("${outputDir}/deeptmhmm/results/r570_subsample_deeptmhmm.gff3").readLines()
+            assert deeptmhmm_gff3_lines.count { it == '##gff-version 3' } == 1 // header not duplicated
+            assert all_ids.every { id -> deeptmhmm_gff3_lines.any { it.contains("${id} Length") } }
+
+            // Final RGA classification still covers exactly the same 4 proteins as the
+            // unchunked "-profile test" run -- chunking is invisible to the final result.
+            def rga_ids = file("${outputDir}/rga/rga_out/rga_predictions.tsv").readLines()
+                .drop(1).collect { it.tokenize('\t')[0] }
+            assert rga_ids.size() == 4
+            assert rga_ids.sort() == all_ids.sort()
+        }
+    }
 }

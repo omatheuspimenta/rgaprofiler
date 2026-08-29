@@ -15,6 +15,7 @@ process DEEPTMHMM {
 
     output:
     tuple val(meta), path("results/*"), emit: predictions
+    tuple val(meta), path("results")  , emit: results_dir // whole directory, for DEEPTMHMM_MERGE to fan back in across chunks
     path "versions.yml"                , emit: versions
 
     script:

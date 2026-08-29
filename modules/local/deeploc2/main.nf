@@ -14,6 +14,7 @@ process DEEPLOC2 {
 
     output:
     tuple val(meta), path("results/*.csv"), emit: predictions
+    tuple val(meta), path("results")      , emit: results_dir // whole directory, for DEEPLOC2_MERGE to fan back in across chunks
     path "versions.yml"                   , emit: versions
 
     script:

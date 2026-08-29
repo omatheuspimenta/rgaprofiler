@@ -1,0 +1,40 @@
+nextflow_process {
+
+    name "Test Process DEEPCOIL2_MERGE"
+    script "../main.nf"
+    process "DEEPCOIL2_MERGE"
+
+    test("Collects two chunks' per-protein .out files into one results/ directory, losing/duplicating nothing") {
+        when {
+            process {
+                """
+                def chunk1_dir = file("\${workDir}/chunk1_results")
+                chunk1_dir.mkdirs()
+                file("\${chunk1_dir}/ProtA.out").text = "aa\\tcc\\traw_cc\\tprob_a\\tprob_d\\nM\\t0.1\\t0.1\\t0.05\\t0.05\\n"
+                file("\${chunk1_dir}/ProtB.out").text = "aa\\tcc\\traw_cc\\tprob_a\\tprob_d\\nM\\t0.9\\t0.9\\t0.45\\t0.45\\n"
+
+                def chunk2_dir = file("\${workDir}/chunk2_results")
+                chunk2_dir.mkdirs()
+                file("\${chunk2_dir}/ProtC.out").text = "aa\\tcc\\traw_cc\\tprob_a\\tprob_d\\nM\\t0.2\\t0.2\\t0.1\\t0.1\\n"
+
+                input[0] = [
+                    [ id:'r570_subsample', single_end:false ], // meta
+                    [ chunk1_dir, chunk2_dir ]
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            def predictions = process.out.predictions[0][1]
+            assert predictions.size() == 3 // ProtA, ProtB, ProtC -- one per input sequence, none lost/duplicated
+
+            def names = predictions.collect { file(it).name }.sort()
+            assert names == ['ProtA.out', 'ProtB.out', 'ProtC.out']
+
+            def results_dir = process.out.results_dir[0][1]
+            assert file(results_dir).isDirectory()
+        }
+    }
+}

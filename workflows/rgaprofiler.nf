@@ -10,12 +10,16 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_rgap
 
 include { FASTA_QC           } from '../modules/local/fasta_qc'
 include { DEEPCOIL2          } from '../modules/local/deepcoil2'
+include { DEEPCOIL2_MERGE    } from '../modules/local/deepcoil2_merge'
 include { PHOBIUS            } from '../modules/local/phobius'
 include { INTERPROSCAN       } from '../modules/local/interproscan'
 include { INTERPROSCAN_MERGE } from '../modules/local/interproscan_merge'
 include { DEEPLOC2           } from '../modules/local/deeploc2'
+include { DEEPLOC2_MERGE     } from '../modules/local/deeploc2_merge'
 include { SIGNALP6           } from '../modules/local/signalp6'
+include { SIGNALP6_MERGE     } from '../modules/local/signalp6_merge'
 include { DEEPTMHMM          } from '../modules/local/deeptmhmm'
+include { DEEPTMHMM_MERGE    } from '../modules/local/deeptmhmm_merge'
 include { RGA_CLASSIFY       } from '../modules/local/rga_classify'
 include { RGA_REPORT         } from '../modules/local/rga_report'
 
@@ -107,8 +111,9 @@ workflow RGAPROFILER {
     // log file, not only on an interactive terminal.
     //
     def pipeline_stages = [
-        'FASTA_QC', 'DEEPCOIL2', 'PHOBIUS', 'INTERPROSCAN', 'INTERPROSCAN_MERGE',
-        'DEEPLOC2', 'SIGNALP6', 'DEEPTMHMM', 'RGA_CLASSIFY', 'RGA_REPORT',
+        'FASTA_QC', 'DEEPCOIL2', 'DEEPCOIL2_MERGE', 'PHOBIUS', 'INTERPROSCAN', 'INTERPROSCAN_MERGE',
+        'DEEPLOC2', 'DEEPLOC2_MERGE', 'SIGNALP6', 'SIGNALP6_MERGE', 'DEEPTMHMM', 'DEEPTMHMM_MERGE',
+        'RGA_CLASSIFY', 'RGA_REPORT',
     ]
     def n_stages = pipeline_stages.size()
     // Same palette + params.monochrome_logs gate the nf-core completion summary already
@@ -158,58 +163,93 @@ workflow RGAPROFILER {
     //
     // Clean the input FASTA (dedup, strip stop-codon '*', uppercase) before handing
     // it to any prediction tool — real proteome FASTAs need this (e.g. trailing '*'
-    // breaks Phobius/InterProScan). Chunk output feeds INTERPROSCAN's fan-out below;
-    // no other tool consumes it (InterProScan alone gets a clear, measured benefit
-    // from being split into many smaller jobs rather than one giant one).
+    // breaks Phobius/InterProScan) — and split it into sequence blocks/chunks so
+    // DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM (below) can each fan
+    // out across them instead of ever processing an entire proteome as one task.
+    // --num_blocks (if set) takes priority and requests exactly that many chunks
+    // (seqkit split2 --by-part balances sequences across them as evenly as possible);
+    // otherwise chunks are sized by --fasta_qc_chunk_size sequences each, same as
+    // before --num_blocks existed. Either way FASTA_QC always keeps whole FASTA
+    // records intact -- chunking never splits a header from its sequence.
     //
-    FASTA_QC(ch_samplesheet, params.fasta_qc_chunk_size)
+    def split_mode  = params.num_blocks ? 'parts' : 'size'
+    def split_value = params.num_blocks ?: params.fasta_qc_chunk_size
+    log.info ''
+    log.info "${colors.bold}  Sequence batching:${colors.reset} " + (
+        params.num_blocks
+            ? "--num_blocks ${colors.bcyan}${params.num_blocks}${colors.reset} (target chunk count, balanced by seqkit split2 --by-part)"
+            : "--fasta_qc_chunk_size ${colors.bcyan}${params.fasta_qc_chunk_size}${colors.reset} sequences/chunk (--num_blocks not set)"
+    )
+    log.info "${colors.dim}  DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM will each run once per resulting chunk.${colors.reset}"
+    FASTA_QC(ch_samplesheet, split_mode, split_value)
     ch_versions = ch_versions.mix(FASTA_QC.out.versions)
     FASTA_QC.out.fasta.subscribe { meta, fasta -> logStageProgress.call('FASTA_QC', meta.id) }
 
+    // .transpose() turns FASTA_QC's one-row-per-sample [meta, [chunk1,chunk2,...]]
+    // into one row per chunk: [meta, chunk1], [meta, chunk2], ... -- shared by every
+    // chunked tool below.
+    def ch_chunks = FASTA_QC.out.chunks.transpose()
+    // Resolved asynchronously, same caveat as total_samples above: reads as '?' in the
+    // progress log until every sample has finished FASTA_QC and the chunk count is final.
+    // Logged here (once) so a run's actual resulting chunk count -- not just the
+    // requested --num_blocks/--fasta_qc_chunk_size value -- is visible in plain stdout,
+    // confirming batching actually took effect (matters most for --num_blocks, whose
+    // realised chunk count can differ slightly from the requested one -- see docs/output.md).
+    def total_chunks = new java.util.concurrent.atomic.AtomicInteger(0)
+    ch_chunks.count().subscribe { n ->
+        total_chunks.set(n as int)
+        log.info "${colors.bold}  Sequence batching:${colors.reset} produced ${colors.bcyan}${n}${colors.reset} chunk(s) total across ${colors.bcyan}${total_samples.get()}${colors.reset} sample(s)"
+    }
+
     //
-    // Run per-tool prediction modules
+    // Run per-tool prediction modules. DeepCoil2, InterProScan, DeepLoc2, SignalP6 and
+    // DeepTMHMM all run once per FASTA_QC chunk rather than once per sample -- these
+    // five tools scale much better (and, for DeepCoil2 in particular, can fail outright
+    // on a very large proteome) as many smaller parallel jobs than one huge single-FASTA
+    // job. Each one's own *_MERGE module then reassembles the per-chunk outputs back
+    // into one result per sample -- respecting each format's own record boundaries
+    // (never an arbitrary line/byte split) -- so nothing downstream needs to know
+    // chunking happened. Phobius alone still runs once per sample: it is CPU-only,
+    // fast, and out of scope for this batching (see task requirements).
     //
-    DEEPCOIL2(FASTA_QC.out.fasta)
+    DEEPCOIL2(ch_chunks)
     ch_versions = ch_versions.mix(DEEPCOIL2.out.versions)
-    DEEPCOIL2.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPCOIL2', meta.id) }
+    DEEPCOIL2.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPCOIL2', meta.id, total_chunks.get()) }
+
+    DEEPCOIL2_MERGE(DEEPCOIL2.out.results_dir.groupTuple())
+    DEEPCOIL2_MERGE.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPCOIL2_MERGE', meta.id) }
 
     PHOBIUS(FASTA_QC.out.fasta)
     ch_versions = ch_versions.mix(PHOBIUS.out.versions)
     PHOBIUS.out.predictions.subscribe { meta, preds -> logStageProgress.call('PHOBIUS', meta.id) }
 
-    //
-    // InterProScan scales much better as many smaller parallel jobs than one huge
-    // single-FASTA job, so (unlike every other tool here) it runs once per FASTA_QC
-    // chunk (.transpose() turns FASTA_QC's one-row-per-sample [meta, [chunk1,chunk2,...]]
-    // into one row per chunk: [meta, chunk1], [meta, chunk2], ...), then INTERPROSCAN_MERGE
-    // concatenates the per-chunk TSVs back into one file per sample (InterProScan's TSV
-    // format has no header row, confirmed against a real run, so plain concatenation is
-    // an exact, lossless merge) — nothing downstream needs to know chunking happened.
-    //
-    def ch_ipr_chunks = FASTA_QC.out.chunks.transpose()
-    // Resolved asynchronously, same caveat as total_samples above: reads as '?' in the
-    // progress log until every sample has finished FASTA_QC and the chunk count is final.
-    def total_chunks = new java.util.concurrent.atomic.AtomicInteger(0)
-    ch_ipr_chunks.count().subscribe { n -> total_chunks.set(n as int) }
-
-    INTERPROSCAN(ch_ipr_chunks, ipr_dir)
+    INTERPROSCAN(ch_chunks, ipr_dir)
     ch_versions = ch_versions.mix(INTERPROSCAN.out.versions)
     INTERPROSCAN.out.tsv.subscribe { meta, tsv -> logStageProgress.call('INTERPROSCAN', meta.id, total_chunks.get()) }
 
     INTERPROSCAN_MERGE(INTERPROSCAN.out.tsv.groupTuple())
     INTERPROSCAN_MERGE.out.tsv.subscribe { meta, tsv -> logStageProgress.call('INTERPROSCAN_MERGE', meta.id) }
 
-    DEEPLOC2(FASTA_QC.out.fasta, deeploc2_models, deeploc2_torch_cache)
+    DEEPLOC2(ch_chunks, deeploc2_models, deeploc2_torch_cache)
     ch_versions = ch_versions.mix(DEEPLOC2.out.versions)
-    DEEPLOC2.out.predictions.subscribe { meta, preds -> logStageProgress.call('DEEPLOC2', meta.id) }
+    DEEPLOC2.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPLOC2', meta.id, total_chunks.get()) }
 
-    SIGNALP6(FASTA_QC.out.fasta, signalp6_models)
+    DEEPLOC2_MERGE(DEEPLOC2.out.results_dir.groupTuple())
+    DEEPLOC2_MERGE.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPLOC2_MERGE', meta.id) }
+
+    SIGNALP6(ch_chunks, signalp6_models)
     ch_versions = ch_versions.mix(SIGNALP6.out.versions)
-    SIGNALP6.out.predictions.subscribe { meta, preds -> logStageProgress.call('SIGNALP6', meta.id) }
+    SIGNALP6.out.results_dir.subscribe { meta, dir -> logStageProgress.call('SIGNALP6', meta.id, total_chunks.get()) }
 
-    DEEPTMHMM(FASTA_QC.out.fasta, deeptmhmm_weights)
+    SIGNALP6_MERGE(SIGNALP6.out.results_dir.groupTuple())
+    SIGNALP6_MERGE.out.results_dir.subscribe { meta, dir -> logStageProgress.call('SIGNALP6_MERGE', meta.id) }
+
+    DEEPTMHMM(ch_chunks, deeptmhmm_weights)
     ch_versions = ch_versions.mix(DEEPTMHMM.out.versions)
-    DEEPTMHMM.out.predictions.subscribe { meta, preds -> logStageProgress.call('DEEPTMHMM', meta.id) }
+    DEEPTMHMM.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPTMHMM', meta.id, total_chunks.get()) }
+
+    DEEPTMHMM_MERGE(DEEPTMHMM.out.results_dir.groupTuple())
+    DEEPTMHMM_MERGE.out.results_dir.subscribe { meta, dir -> logStageProgress.call('DEEPTMHMM_MERGE', meta.id) }
 
     //
     // Classify proteins into RGA families/subclasses from the six tools' outputs above
@@ -217,17 +257,17 @@ workflow RGAPROFILER {
     // and PLAN.md Stage 6). Joined by sample meta.id -- each upstream module emits exactly
     // one result per sample, so a plain join() is enough (no groupTuple needed).
     //
-    def ch_deeptmhmm_gff3 = DEEPTMHMM.out.predictions
+    def ch_deeptmhmm_gff3 = DEEPTMHMM_MERGE.out.predictions
         .map { meta, files -> [ meta, files.find { it.toString().endsWith('.gff3') } ] }
-    def ch_signalp6_predictions = SIGNALP6.out.predictions
+    def ch_signalp6_predictions = SIGNALP6_MERGE.out.predictions
         .map { meta, files -> [ meta, files.find { it.toString().contains('_predictions.txt') } ] }
 
     def ch_rga_classify_input = INTERPROSCAN_MERGE.out.tsv
         .join(PHOBIUS.out.predictions)
         .join(ch_deeptmhmm_gff3)
         .join(ch_signalp6_predictions)
-        .join(DEEPLOC2.out.predictions)
-        .join(DEEPCOIL2.out.results_dir)
+        .join(DEEPLOC2_MERGE.out.predictions)
+        .join(DEEPCOIL2_MERGE.out.results_dir)
 
     RGA_CLASSIFY(ch_rga_classify_input)
     ch_versions = ch_versions.mix(RGA_CLASSIFY.out.versions)

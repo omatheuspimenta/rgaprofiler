@@ -10,7 +10,8 @@ process FASTA_QC {
 
     input:
     tuple val(meta), path(fasta)
-    val chunk_size
+    val split_mode  // 'size' (split_value = sequences/chunk) or 'parts' (split_value = chunk count)
+    val split_value
 
     output:
     tuple val(meta), path("*_clean.fasta")      , emit: fasta
@@ -20,7 +21,7 @@ process FASTA_QC {
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    fasta_qc.sh ${fasta} ${prefix}_clean.fasta ${chunk_size}
+    fasta_qc.sh ${fasta} ${prefix}_clean.fasta ${split_mode} ${split_value}
 
     # nf-core modules: Add version information to output
     cat <<-END_VERSIONS > versions.yml

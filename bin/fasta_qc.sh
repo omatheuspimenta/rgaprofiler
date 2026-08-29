@@ -1,20 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <input.fasta> <output.fasta> <chunk_size>" >&2
-    echo "  chunk_size: number of sequences per chunk (positive integer)" >&2
+if [ "$#" -ne 4 ]; then
+    echo "Usage: $0 <input.fasta> <output.fasta> <split_mode> <split_value>" >&2
+    echo "  split_mode:  'size' (split into chunks of split_value sequences each) or" >&2
+    echo "               'parts' (split into exactly split_value chunks, balanced by seqkit)" >&2
+    echo "  split_value: positive integer -- sequences-per-chunk for 'size', chunk count for 'parts'" >&2
     exit 1
 fi
 
 INPUT=$1
 OUTPUT=$2
-CHUNK_SIZE=$3
+SPLIT_MODE=$3
+SPLIT_VALUE=$4
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-if ! [[ "$CHUNK_SIZE" =~ ^[1-9][0-9]*$ ]]; then
-    echo "ERROR: chunk_size must be a positive integer, got '$CHUNK_SIZE'" >&2
+if [ "$SPLIT_MODE" != "size" ] && [ "$SPLIT_MODE" != "parts" ]; then
+    echo "ERROR: split_mode must be 'size' or 'parts', got '$SPLIT_MODE'" >&2
+    exit 1
+fi
+
+if ! [[ "$SPLIT_VALUE" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ERROR: split_value must be a positive integer, got '$SPLIT_VALUE'" >&2
     exit 1
 fi
 
@@ -69,17 +77,27 @@ if [ ! -s "$OUTPUT" ]; then
     exit 1
 fi
 
-# 5. Split the cleaned FASTA into chunks of $CHUNK_SIZE sequences each, so
-#    downstream Nextflow processes can fan out over them. Chunks are written
-#    to a dedicated directory next to $OUTPUT, named after it, e.g.
-#    "results.fasta" -> "results_chunks/results.part_001.fasta"
+# 5. Split the cleaned FASTA into chunks (each a complete, self-contained set of
+#    FASTA records -- never an arbitrary line split), so downstream Nextflow
+#    processes can fan out over them. Chunks are written to a dedicated directory
+#    next to $OUTPUT, named after it, e.g. "results.fasta" -> "results_chunks/
+#    results.part_001.fasta". Two mutually exclusive modes, both backed by seqkit
+#    split2 (which always keeps whole records together):
+#      - 'size':  a fixed number of sequences per chunk (split_value each);
+#                 the resulting chunk *count* depends on the input's sequence total.
+#      - 'parts': a fixed chunk *count* (split_value chunks); seqkit distributes
+#                 sequences across them as evenly as possible.
 OUTBASE=$(basename "$OUTPUT")
 OUTDIR=$(dirname "$OUTPUT")
 CHUNK_PREFIX="${OUTBASE%.*}"
 CHUNK_DIR="$OUTDIR/${CHUNK_PREFIX}_chunks"
 
 rm -rf "$CHUNK_DIR"
-seqkit split2 -s "$CHUNK_SIZE" -O "$CHUNK_DIR" -o "$CHUNK_PREFIX" -e .fasta -w 0 "$OUTPUT"
+if [ "$SPLIT_MODE" = "size" ]; then
+    seqkit split2 -s "$SPLIT_VALUE" -O "$CHUNK_DIR" -o "$CHUNK_PREFIX" -e .fasta -w 0 "$OUTPUT"
+else
+    seqkit split2 -p "$SPLIT_VALUE" -O "$CHUNK_DIR" -o "$CHUNK_PREFIX" -e .fasta -w 0 "$OUTPUT"
+fi
 
 N_CHUNKS=$(find "$CHUNK_DIR" -maxdepth 1 -name '*.fasta' | wc -l)
 if [ "$N_CHUNKS" -eq 0 ]; then
@@ -87,4 +105,4 @@ if [ "$N_CHUNKS" -eq 0 ]; then
     exit 1
 fi
 
-echo "Split $OUTPUT into $N_CHUNKS chunk(s) of up to $CHUNK_SIZE sequences in $CHUNK_DIR" >&2
+echo "Split $OUTPUT into $N_CHUNKS chunk(s) (mode=$SPLIT_MODE, value=$SPLIT_VALUE) in $CHUNK_DIR" >&2

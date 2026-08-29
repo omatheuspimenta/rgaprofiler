@@ -1,0 +1,45 @@
+nextflow_process {
+
+    name "Test Process DEEPLOC2_MERGE"
+    script "../main.nf"
+    process "DEEPLOC2_MERGE"
+
+    test("Merges two chunks' DeepLoc2 CSVs into one CSV per sample, keeping one header and every data row") {
+        when {
+            process {
+                """
+                def prefix = 'r570_subsample'
+
+                def chunk1_dir = file("\${workDir}/chunk1_results")
+                chunk1_dir.mkdirs()
+                file("\${chunk1_dir}/\${prefix}_deeploc2.csv").text =
+                    "Protein_ID,Localizations,Signals\\n" +
+                    "Seq1,Extracellular,Signal peptide\\n"
+
+                def chunk2_dir = file("\${workDir}/chunk2_results")
+                chunk2_dir.mkdirs()
+                file("\${chunk2_dir}/\${prefix}_deeploc2.csv").text =
+                    "Protein_ID,Localizations,Signals\\n" +
+                    "Seq2,Cytoplasm,None\\n"
+
+                input[0] = [
+                    [ id:prefix, single_end:false ], // meta
+                    [ chunk1_dir, chunk2_dir ]
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            // A single merged CSV -- glob matching exactly one file comes through as a
+            // bare Path, not a List (same shape DEEPLOC2's own predictions emit has).
+            def merged_csv = process.out.predictions[0][1]
+            def lines = file(merged_csv).readLines()
+            assert lines.size() == 3 // 1-line header once + 2 data rows (one per chunk)
+            assert lines[0] == 'Protein_ID,Localizations,Signals'
+            assert lines.any { it.startsWith('Seq1,') }
+            assert lines.any { it.startsWith('Seq2,') }
+        }
+    }
+}
