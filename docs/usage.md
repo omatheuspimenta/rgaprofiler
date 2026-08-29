@@ -24,10 +24,10 @@ R570,/absolute/path/to/R570.protein.fasta
 another_sample,/absolute/path/to/another_sample.protein.fasta
 ```
 
-| Column   | Description                                                                                                                            |
+| Column   | Description                                                                                                                             |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample` | Custom sample name, used to label this run's outputs (e.g. `<sample>_interpro.tsv`). Spaces are automatically converted to underscores. |
-| `fasta`  | Full path to a protein FASTA file for this sample. Must exist and end in `.fa`/`.fasta` (optionally gzipped, e.g. `.fasta.gz`).          |
+| `fasta`  | Full path to a protein FASTA file for this sample. Must exist and end in `.fa`/`.fasta` (optionally gzipped, e.g. `.fasta.gz`).         |
 
 Unlike read-based nf-core pipelines, there's no concept of "multiple runs of the same
 sample" here (no lanes to concatenate) — one row is one FASTA to profile. If you have
@@ -35,7 +35,7 @@ multiple FASTA files that should be treated as a single proteome, concatenate th
 yourself before listing the result as one row.
 
 **Important**: use an **absolute path** in the `fasta` column, not a relative one.
-Nextflow resolves a relative path in the samplesheet against the directory you *launch*
+Nextflow resolves a relative path in the samplesheet against the directory you _launch_
 `nextflow run` from, not against wherever `samplesheet.csv` itself lives — a relative
 path that looks correct can silently fail to resolve if you run the pipeline from a
 different directory than the one you wrote the samplesheet in.
@@ -125,7 +125,14 @@ Use this parameter to choose a configuration profile. Profiles can give configur
 Several generic profiles are bundled with the pipeline which instruct the pipeline to use software packaged using different methods (Docker, Singularity, Podman, Shifter, Charliecloud, Apptainer, Conda) - see below.
 
 > [!IMPORTANT]
-> We highly recommend the use of Docker or Singularity containers for full pipeline reproducibility, however when this is not possible, Conda is also supported.
+> **This pipeline is built for and tested with `-profile docker`.** Every tool this pipeline
+> wraps (DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6, DeepTMHMM, `rga_classify`) ships
+> as a public, pre-built Docker image on GHCR (`ghcr.io/omatheuspimenta/...`) — Docker pulls
+> these automatically, so there is nothing to build yourself. Conda is **not** supported for
+> this pipeline: only `FASTA_QC` declares a conda environment, so `-profile conda` will fail on
+> every other step. Singularity/Podman/Apptainer/Charliecloud can in principle pull the same
+> public images (they all understand plain Docker/OCI images), but that path has not been
+> validated for this pipeline — Docker is the one to reach for.
 
 The pipeline also dynamically loads configurations from [https://github.com/nf-core/configs](https://github.com/nf-core/configs) when it runs, making multiple config profiles for various institutional clusters available at run time. For more information and to check if your system is supported, please see the [nf-core/configs documentation](https://github.com/nf-core/configs#documentation).
 

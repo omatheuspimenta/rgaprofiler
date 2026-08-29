@@ -9,8 +9,8 @@ process SIGNALP6 {
                          // here accordingly -- this module just points --model_dir at whatever it's given.
 
     // Set container to use for this process
-    container 'signalp6:baseline'
-    // container 'ghcr.io/omatheuspimenta/signalp6:6.0h'
+    container 'ghcr.io/omatheuspimenta/signalp6:6.0h'
+    // container 'signalp6:baseline' // local dev build
 
     input:
     tuple val(meta), path(fasta)

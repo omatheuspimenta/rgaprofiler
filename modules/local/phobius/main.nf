@@ -3,7 +3,8 @@ process PHOBIUS {
     label 'process_single'
 
     // Set the docker container to use for this process.
-    container 'quay.io/phobius:local' 
+    container 'ghcr.io/omatheuspimenta/phobius:1.01'
+    // container 'quay.io/phobius:local' // local dev build
 
     input:
     tuple val(meta), path(fasta)

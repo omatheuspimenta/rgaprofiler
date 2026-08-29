@@ -1,5 +1,0 @@
-locus	n_isoforms	n_isoforms_rga	representative_protein_id	rga_family	rga_subclass	subclasses_observed	isoforms_disagree	confidence
-SoffiXsponR570.09Cg101200	1	0	SoffiXsponR570.09Cg101200.1.p	Non-RGA	NA	NA	False	high
-SoffiXsponR570.10Eg022100	1	1	SoffiXsponR570.10Eg022100.1.p	NLR	CNL	CNL	False	medium
-SoffiXsponR570.7os1g005900	1	0	SoffiXsponR570.7os1g005900.1.p	Non-RGA	NA	NA	False	high
-SoffiXsponR570.7os1g018900	1	0	SoffiXsponR570.7os1g018900.1.p	Non-RGA	NA	NA	False	high

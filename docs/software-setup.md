@@ -2,7 +2,7 @@
 
 Several tools this pipeline runs cannot legally be redistributed as part of the pipeline's Docker images — either because they carry an academic/non-commercial license (DeepTMHMM), or because their model weights/databases are distributed separately by their authors (SignalP 6.0, DeepLoc 2, InterProScan's licensed sub-analyses).
 
-To handle this, every tool's Docker image is a **"baseline" image**: it bakes in only redistributable content (OS, runtime, non-restricted code/dependencies) and never bakes in license-gated weights, binaries, or databases. You supply those yourself, the pipeline validates they're present before running the corresponding step, and they're mounted into the container at runtime. Because the images themselves never embed restricted content, they're safe to publish and pull publicly — only the software *you* place under `softwares/` is subject to each tool's own license terms.
+To handle this, every tool's Docker image is a **"baseline" image**: it bakes in only redistributable content (OS, runtime, non-restricted code/dependencies) and never bakes in license-gated weights, binaries, or databases. You supply those yourself, the pipeline validates they're present before running the corresponding step, and they're mounted into the container at runtime. Because the images themselves never embed restricted content, they're safe to publish and pull publicly — only the software _you_ place under `softwares/` is subject to each tool's own license terms.
 
 `softwares/` is gitignored and untracked — nothing you place there is ever committed to this repository.
 
@@ -50,6 +50,7 @@ If you already have an InterProScan installation elsewhere (e.g. this repo's own
 **License**: CC BY-NC-SA 4.0 (non-commercial, academic use only) — this is the most restrictive license among this pipeline's tools. Do not use DeepTMHMM outputs for commercial purposes without separately obtaining rights to do so.
 
 **Required files**, under `softwares_dir/DeepTMHMM/DeepTMHMM-Academic-License-v1.0/`:
+
 - `deeptmhmm_cv_0.model` … `deeptmhmm_cv_4.model` (5 cross-validation checkpoints)
 - `esm_model_alphabet.pt`, `esm_model_args.pt`, `esm_model_state_dict.pt` (bundled ESM1b weights)
 
@@ -64,18 +65,20 @@ Obtain the DeepTMHMM Academic License release from its authors (DTU Health Tech 
 SignalP 6.0 ships three alternative run modes (`fast`, `slow`, `slow-sequential`), each needing its own separately-downloaded weight file(s) — "your download only included the one you picked" (DTU's own words). This pipeline defaults to **`slow-sequential`**, since that's the mode whose weights (`sequential_models_signalp6/`) are actually present in this repo's own reference install; it takes ~6x longer than `fast` but needs no more RAM.
 
 **Required**, under `softwares_dir/SignalP6/signalp-6-package/models/`:
+
 - `sequential_models_signalp6/` (the `slow-sequential` mode's weights — this pipeline's default)
 
 **Optional** (only needed if you override `--mode` via `task.ext.args` in `conf/modules.config`):
+
 - `distilled_model_signalp6.pt` (`fast` mode)
 - `ensemble_model_signalp6.pt` (`slow` mode)
 
 Download SignalP 6.0 from https://services.healthtech.dtu.dk/services/SignalP-6.0/ and place its `models/` directory contents at the path above.
 
-**GPU note**: unlike DeepLoc2, SignalP6 has no `--device`/`-d` runtime flag — whether it uses a GPU is a property of the weight *files themselves*. The pipeline handles this automatically: whenever GPU is requested/detected (`--use_gpu auto`, the default, or `--use_gpu true`), `workflows/rgaprofiler.nf` looks for a **separate**, GPU-converted copy of the weights at `softwares_dir/SignalP6/signalp-6-package/models_gpu/` and points SignalP6 at that directory instead of the normal CPU one — you just need to have produced that directory once, ahead of time (SignalP6 has no way to convert its own weights at run time, and doing so on every run would be needlessly slow anyway). One-time setup, run from the signalp6 image so `signalp6_convert_models` and its Python dependencies are available (needs the same real GPU + NVIDIA Container Toolkit as running the pipeline itself — this actually rewrites tensors onto a CUDA device, it isn't a pure format conversion):
+**GPU note**: unlike DeepLoc2, SignalP6 has no `--device`/`-d` runtime flag — whether it uses a GPU is a property of the weight _files themselves_. The pipeline handles this automatically: whenever GPU is requested/detected (`--use_gpu auto`, the default, or `--use_gpu true`), `workflows/rgaprofiler.nf` looks for a **separate**, GPU-converted copy of the weights at `softwares_dir/SignalP6/signalp-6-package/models_gpu/` and points SignalP6 at that directory instead of the normal CPU one — you just need to have produced that directory once, ahead of time (SignalP6 has no way to convert its own weights at run time, and doing so on every run would be needlessly slow anyway). One-time setup, run from the signalp6 image so `signalp6_convert_models` and its Python dependencies are available (needs the same real GPU + NVIDIA Container Toolkit as running the pipeline itself — this actually rewrites tensors onto a CUDA device, it isn't a pure format conversion):
 
 ```bash
-docker run --rm --gpus all -u $(id -u):$(id -g) -v "$(pwd)/softwares/SignalP6":/data quay.io/signalp6:baseline bash -c '
+docker run --rm --gpus all -u $(id -u):$(id -g) -v "$(pwd)/softwares/SignalP6":/data ghcr.io/omatheuspimenta/signalp6:6.0h bash -c '
     cp -r /data/signalp-6-package/models /data/signalp-6-package/models_gpu &&
     signalp6_convert_models gpu /data/signalp-6-package/models_gpu
 '
@@ -88,18 +91,20 @@ This copies the CPU weights first, so the original `models/` directory is left u
 **License**: DTU Health Tech academic-use license (the classifier checkpoints below); the ESM1b base encoder is a separate, freely-downloadable fair-esm weight, kept out of the image only because of its size (~7.3GB), not its license.
 
 **Required files**, under `softwares_dir/DeepLoc2/DeepLoc2/models/`:
+
 - `models_esm1b/`, `models_prott5/` (per-fold checkpoint directories)
 - `ESM1b_alphabet.pkl`, `ProtT5_alphabet.pkl`
 
 Download DeepLoc 2 from https://services.healthtech.dtu.dk/services/DeepLoc-2.1/ and place its models directory at the path above.
 
 **Also required** (the pipeline's default "Fast" model), under `softwares_dir/DeepLoc2/torch_cache/hub/checkpoints/`:
+
 - `esm1b_t33_650M_UR50S.pt`, `esm1b_t33_650M_UR50S-contact-regression.pt`
 
-The easiest way to obtain these is to let a real, standalone DeepLoc 2 install download them once (`pip install .` from the DTU package, then run `deeploc2 -f <any.fasta>` — this populates `~/.cache/torch/hub/checkpoints/`), then copy or symlink that `hub/checkpoints/` directory to the path above. `torch_cache/` is laid out exactly like a `$TORCH_HOME` directory (i.e. it *is* one — you can point `TORCH_HOME` at it directly outside the pipeline too). The "Accurate" model (ProtT5-XL, not used by default) needs a further ~11GB Hugging Face download and is not covered by the pre-flight check.
+The easiest way to obtain these is to let a real, standalone DeepLoc 2 install download them once (`pip install .` from the DTU package, then run `deeploc2 -f <any.fasta>` — this populates `~/.cache/torch/hub/checkpoints/`), then copy or symlink that `hub/checkpoints/` directory to the path above. `torch_cache/` is laid out exactly like a `$TORCH_HOME` directory (i.e. it _is_ one — you can point `TORCH_HOME` at it directly outside the pipeline too). The "Accurate" model (ProtT5-XL, not used by default) needs a further ~11GB Hugging Face download and is not covered by the pre-flight check.
 
 ## Tools that need no manual setup
 
 DeepCoil2 and Phobius bake in everything they need at Docker build time (DeepCoil2's weights come from its own PyPI package; Phobius's binary tarball is vendored under `docker/phobius/`) — nothing to place under `softwares/` for these two.
 
-`rga_classify` (the final RGA-calling step, vendored from [omatheuspimenta/SugarcaneTranscriptomics](https://github.com/omatheuspimenta/SugarcaneTranscriptomics)) needs nothing under `softwares/` either — it's pure Python/pandas/PyYAML classification logic, no model weights, no license-gated database, no network access at runtime.
+`rga_classify` (the final RGA-calling step, vendored from [omatheuspimenta/rgapredictor](https://github.com/omatheuspimenta/rgapredictor)) needs nothing under `softwares/` either — it's pure Python/pandas/PyYAML classification logic, no model weights, no license-gated database, no network access at runtime.

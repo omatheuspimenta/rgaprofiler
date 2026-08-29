@@ -5,7 +5,8 @@ process INTERPROSCAN_MERGE {
     // Just concatenates already-computed TSVs (InterProScan's TSV format has no header
     // row, confirmed against a real run -- plain `cat` is a correct, exact merge here).
     // Reuses interproscan's own image rather than building a dedicated one for `cat`.
-    container 'quay.io/interproscan_base:local'
+    container 'ghcr.io/omatheuspimenta/interproscan:5.78-109.0'
+    // container 'quay.io/interproscan_base:local' // local dev build
 
     input:
     // stageAs with a wildcard avoids a name collision: every chunk's INTERPROSCAN task

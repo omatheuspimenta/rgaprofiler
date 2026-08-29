@@ -5,8 +5,8 @@ process DEEPTMHMM {
                          // see params.use_gpu / docs/software-setup.md.
 
     // Set container to use for this process
-    container 'deeptmhmm:baseline'
-    // container 'ghcr.io/omatheuspimenta/deeptmhmm:1.0'
+    container 'ghcr.io/omatheuspimenta/deeptmhmm:1.0'
+    // container 'deeptmhmm:baseline' // local dev build
 
     input:
     tuple val(meta), path(fasta)

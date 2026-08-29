@@ -33,7 +33,7 @@ lint:
 template:
   org: omatheuspimenta
   name: rgaprofiler
-  description: rgarofiler is a Nextflow pipeline for the comprehensive identification,
+  description: rgaprofiler is a Nextflow pipeline for the comprehensive identification,
     annotation, and classification of Resistance Gene Analogs (RGAs) from protein
     sequences. The workflow integrates multiple state-of-the-art prediction tools,
     including DeepCoil2 (coiled-coil domains), DeepTMHMM (transmembrane helices),

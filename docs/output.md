@@ -12,7 +12,7 @@ The pipeline takes a protein FASTA per sample and:
 
 1. Cleans/deduplicates it and splits it into chunks ([FASTA_QC](#fasta_qc)).
 2. Runs six independent protein-prediction tools against the cleaned FASTA in parallel: [DeepCoil2](#deepcoil2) (coiled-coil domains), [Phobius](#phobius) (signal peptides + TM topology), [InterProScan](#interproscan) (protein domains/functional annotation), [DeepLoc2](#deeploc2) (subcellular localization), [SignalP6](#signalp6) (signal peptides), [DeepTMHMM](#deeptmhmm) (transmembrane helices).
-3. Combines all six tools' outputs into per-protein RGA (Resistance Gene Analog) classifications ([RGA classification](#rga-classification)), using the classification logic from [`SugarcaneTranscriptomics`](https://github.com/omatheuspimenta/SugarcaneTranscriptomics).
+3. Combines all six tools' outputs into per-protein RGA (Resistance Gene Analog) classifications ([RGA classification](#rga-classification)), using the classification logic from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor).
 4. Renders a self-contained HTML summary of those classifications ([Summary report](#summary-report)).
 
 ```
@@ -127,7 +127,7 @@ input.fasta ──▶ FASTA_QC ──▶ ┌─ DeepCoil2 ────┐
 
 </details>
 
-Ports the RGA classification logic from [`SugarcaneTranscriptomics`](https://github.com/omatheuspimenta/SugarcaneTranscriptomics) (vendored unmodified, see [`CITATIONS.md`](../CITATIONS.md)). CPU-only.
+Ports the RGA classification logic from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor) (vendored unmodified, see [`CITATIONS.md`](../CITATIONS.md)). CPU-only.
 
 ### Summary report
 

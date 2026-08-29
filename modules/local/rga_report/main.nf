@@ -6,7 +6,8 @@ process RGA_REPORT {
     // pipeline-authored script (bin/rga_report.py, not vendored from anywhere) that only
     // needs pandas + PyYAML to read rga_classify's own harmonised outputs, and that image
     // already has both in its uv-managed venv (see docker/rga_classify/Dockerfile).
-    container 'rga_classify:baseline'
+    container 'ghcr.io/omatheuspimenta/rga_classify:0.0.1'
+    // container 'rga_classify:baseline' // local dev build
 
     input:
     tuple val(meta), path(rga_predictions_tsv), path(rga_summary_tsv), path(versions_yml)

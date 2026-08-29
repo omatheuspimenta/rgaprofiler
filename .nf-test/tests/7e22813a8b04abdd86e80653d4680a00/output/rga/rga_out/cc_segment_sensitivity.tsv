@@ -1,7 +1,0 @@
-threshold	min_length	n_proteins_with_cc	n_segments
-0.2	14	2	4
-0.2	21	1	1
-0.2	28	1	1
-0.5	14	1	1
-0.5	21	1	1
-0.5	28	1	1

@@ -1,6 +1,6 @@
-# rga_classify -- vendored from omatheuspimenta/SugarcaneTranscriptomics
-# (code/rgas/, https://github.com/omatheuspimenta/SugarcaneTranscriptomics),
-# the reference RGA-classification pipeline this whole tool exists to feed.
+# rga_classify -- vendored from omatheuspimenta/rgapredictor
+# (https://github.com/omatheuspimenta/rgapredictor), the reference
+# RGA-classification pipeline this whole tool exists to feed.
 #
 # This is a straight vendored copy (docker/rga_classify/src/, code + config
 # only, no test suite) run exactly as documented upstream -- `uv sync` then

@@ -9,7 +9,7 @@ nextflow_process {
     // exact file formats/paths this pipeline's own modules produce as rga_classify inputs.
     // The classification *logic* itself was validated separately and far more thoroughly:
     // running this same vendored code against the real, full R570 outputs bundled in
-    // github.com/omatheuspimenta/SugarcaneTranscriptomics's data/rgas/ reproduced
+    // github.com/omatheuspimenta/rgapredictor's data/rgas/ reproduced
     // rga_predictions.tsv byte-for-byte against that repo's own results/rgas/SaccharumR570/
     // (see PLAN.md Stage 6). Needs `-profile docker` and softwares/{DeepLoc2,SignalP6,DeepTMHMM,InterProScan}/
     // populated per docs/software-setup.md, same as every upstream module's own test.

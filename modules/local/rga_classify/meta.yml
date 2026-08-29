@@ -15,8 +15,8 @@ tools:
         set of classification rules (a reimplementation of Rody et al. 2019, with three
         documented extensions) to call each protein's RGA family/subclass with a
         human-readable justification.
-      homepage: https://github.com/omatheuspimenta/SugarcaneTranscriptomics
-      documentation: https://github.com/omatheuspimenta/SugarcaneTranscriptomics/tree/main/docs/rga
+      homepage: https://github.com/omatheuspimenta/rgapredictor
+      documentation: https://github.com/omatheuspimenta/rgapredictor/tree/main/docs/rga
       doi: ""
       licence: []
       identifier: ""

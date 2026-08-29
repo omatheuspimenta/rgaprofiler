@@ -141,7 +141,7 @@ workflow RGAPROFILER {
 
     //
     // Classify proteins into RGA families/subclasses from the six tools' outputs above
-    // (vendored from omatheuspimenta/SugarcaneTranscriptomics, see docker/rga_classify/
+    // (vendored from omatheuspimenta/rgapredictor, see docker/rga_classify/
     // and PLAN.md Stage 6). Joined by sample meta.id -- each upstream module emits exactly
     // one result per sample, so a plain join() is enough (no groupTuple needed).
     //

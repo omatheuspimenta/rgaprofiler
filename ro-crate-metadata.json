@@ -22,8 +22,8 @@
             "@id": "./",
             "@type": "Dataset",
             "creativeWorkStatus": "InProgress",
-            "datePublished": "2026-08-06T14:10:29+00:00",
-            "description": "# omatheuspimenta/rgaprofiler\n\n[![GitHub Actions CI Status](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/nf-test.yml/badge.svg)](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/nf-test.yml)\n[![GitHub Actions Linting Status](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/linting.yml/badge.svg)](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/linting.yml)[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.XXXXXXX)\n[![nf-test](https://img.shields.io/badge/unit_tests-nf--test-337ab7.svg)](https://www.nf-test.com)\n\n[![Nextflow](https://img.shields.io/badge/version-%E2%89%A525.10.4-green?style=flat&logo=nextflow&logoColor=white&color=%230DC09D&link=https%3A%2F%2Fnextflow.io)](https://www.nextflow.io/)\n[![nf-core template version](https://img.shields.io/badge/nf--core_template-4.1.0-green?style=flat&logo=nfcore&logoColor=white&color=%2324B064&link=https%3A%2F%2Fnf-co.re)](https://github.com/nf-core/tools/releases/tag/4.1.0)\n[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)\n[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)\n[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)\n[![Launch on Seqera Platform](https://img.shields.io/badge/Launch%20%F0%9F%9A%80-Seqera%20Platform-%234256e7)](https://cloud.seqera.io/launch?pipeline=https://github.com/omatheuspimenta/rgaprofiler)\n\n## Introduction\n\n**omatheuspimenta/rgaprofiler** is a bioinformatics pipeline that predicts RGAs (Resistance Gene Analogs) in plant proteomes. Given one or more protein FASTA files, it cleans and deduplicates the input, runs six independent protein-prediction tools in parallel (DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6, DeepTMHMM), and combines their outputs into per-protein RGA family/subclass calls using the classification logic from [`SugarcaneTranscriptomics`](https://github.com/omatheuspimenta/SugarcaneTranscriptomics), plus a self-contained HTML summary report. See [`docs/output.md`](docs/output.md) for the full output structure.\n\n1. Input QC: deduplicate, strip trailing stop codons, split into chunks ([`FASTA_QC`](docs/output.md#fasta_qc))\n2. Run six prediction tools in parallel: coiled-coil domains ([`DeepCoil2`](docs/output.md#deepcoil2)), signal peptides + TM topology ([`Phobius`](docs/output.md#phobius)), domain/functional annotation ([`InterProScan`](docs/output.md#interproscan)), subcellular localization ([`DeepLoc2`](docs/output.md#deeploc2)), signal peptides ([`SignalP6`](docs/output.md#signalp6)), transmembrane helices ([`DeepTMHMM`](docs/output.md#deeptmhmm))\n3. Classify each protein as an RGA (family/subclass) from the combined evidence ([`RGA_CLASSIFY`](docs/output.md#rga-classification))\n4. Render a self-contained HTML summary report ([`RGA_REPORT`](docs/output.md#summary-report))\n\nDeepCoil2, DeepLoc2, SignalP6, and DeepTMHMM can run on a GPU (`--use_gpu`); Phobius, InterProScan, and the RGA classification/report steps are CPU-only. Several of the underlying tools (InterProScan's database, DeepTMHMM/SignalP6/DeepLoc2's model weights) are license-gated and must be downloaded separately by the user \u2014 see [`docs/software-setup.md`](docs/software-setup.md).\n\n## Usage\n\n> [!NOTE]\n> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.\n\nFirst, prepare a samplesheet with your input data that looks as follows:\n\n`samplesheet.csv`:\n\n```csv\nsample,fasta\nsample1,/path/to/sample1.protein.fasta\n```\n\nEach row is one protein FASTA to profile. `sample` is a free-form identifier; `fasta` must exist and end in `.fa`/`.fasta` (optionally gzipped).\n\nYou'll also need the license-gated software/databases each tool expects under `--softwares_dir` (default `./softwares`) \u2014 see [`docs/software-setup.md`](docs/software-setup.md) for exactly what to download and where to put it, and `--interproscan_db` pointed at your InterProScan database directory (no default, since it varies per install).\n\nNow, you can run the pipeline using:\n\n```bash\nnextflow run omatheuspimenta/rgaprofiler \\\n   -profile <docker/singularity/.../institute> \\\n   --input samplesheet.csv \\\n   --interproscan_db /path/to/interproscan-5.XX-YY.0 \\\n   --outdir <OUTDIR>\n```\n\n> [!WARNING]\n> Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).\n\n## Credits\n\nomatheuspimenta/rgaprofiler was originally written by Pimenta-Zanon, M. H..\n\n## Contributions and Support\n\nIf you would like to contribute to this pipeline, please see the [contributing guidelines](docs/CONTRIBUTING.md).\n\n## Citations\n\n<!-- Add a Zenodo DOI citation here after the pipeline's first tagged release; update the badge at the top of this file too. -->\n\nAn extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.\n\nThis pipeline uses code and infrastructure developed and maintained by the [nf-core](https://nf-co.re) community, reused here under the [MIT license](https://github.com/nf-core/tools/blob/main/LICENSE).\n\n> **The nf-core framework for community-curated bioinformatics pipelines.**\n>\n> Philip Ewels, Alexander Peltzer, Sven Fillinger, Harshil Patel, Johannes Alneberg, Andreas Wilm, Maxime Ulysse Garcia, Paolo Di Tommaso & Sven Nahnsen.\n>\n> _Nat Biotechnol._ 2020 Feb 13. doi: [10.1038/s41587-020-0439-x](https://dx.doi.org/10.1038/s41587-020-0439-x).\n",
+            "datePublished": "2026-08-29T11:36:41+00:00",
+            "description": "# omatheuspimenta/rgaprofiler\n\n[![GitHub Actions CI Status](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/nf-test.yml/badge.svg)](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/nf-test.yml)\n[![GitHub Actions Linting Status](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/linting.yml/badge.svg)](https://github.com/omatheuspimenta/rgaprofiler/actions/workflows/linting.yml)\n[![nf-test](https://img.shields.io/badge/unit_tests-nf--test-337ab7.svg)](https://www.nf-test.com)\n\n[![Nextflow](https://img.shields.io/badge/version-%E2%89%A525.10.4-green?style=flat&logo=nextflow&logoColor=white&color=%230DC09D&link=https%3A%2F%2Fnextflow.io)](https://www.nextflow.io/)\n[![nf-core template version](https://img.shields.io/badge/nf--core_template-4.1.0-green?style=flat&logo=nfcore&logoColor=white&color=%2324B064&link=https%3A%2F%2Fnf-co.re)](https://github.com/nf-core/tools/releases/tag/4.1.0)\n[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)\n\n## Introduction\n\n**omatheuspimenta/rgaprofiler** is a bioinformatics pipeline that predicts RGAs (Resistance Gene Analogs) in plant proteomes. Given one or more protein FASTA files, it cleans and deduplicates the input, runs six independent protein-prediction tools in parallel (DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6, DeepTMHMM), and combines their outputs into per-protein RGA family/subclass calls using the classification logic from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor), plus a self-contained HTML summary report. See [`docs/output.md`](docs/output.md) for the full output structure.\n\n1. Input QC: deduplicate, strip trailing stop codons, split into chunks ([`FASTA_QC`](docs/output.md#fasta_qc))\n2. Run six prediction tools in parallel: coiled-coil domains ([`DeepCoil2`](docs/output.md#deepcoil2)), signal peptides + TM topology ([`Phobius`](docs/output.md#phobius)), domain/functional annotation ([`InterProScan`](docs/output.md#interproscan)), subcellular localization ([`DeepLoc2`](docs/output.md#deeploc2)), signal peptides ([`SignalP6`](docs/output.md#signalp6)), transmembrane helices ([`DeepTMHMM`](docs/output.md#deeptmhmm))\n3. Classify each protein as an RGA (family/subclass) from the combined evidence ([`RGA_CLASSIFY`](docs/output.md#rga-classification))\n4. Render a self-contained HTML summary report ([`RGA_REPORT`](docs/output.md#summary-report))\n\nDeepCoil2, DeepLoc2, SignalP6, and DeepTMHMM can run on a GPU (`--use_gpu`); Phobius, InterProScan, and the RGA classification/report steps are CPU-only. Several of the underlying tools (InterProScan's database, DeepTMHMM/SignalP6/DeepLoc2's model weights) are license-gated and must be downloaded separately by the user — see [`docs/software-setup.md`](docs/software-setup.md).\n\n## Usage\n\n> [!NOTE]\n> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.\n\n### Prerequisites\n\nBefore running the pipeline you need, on the machine that will run it:\n\n1. [Nextflow](https://www.nextflow.io/docs/latest/install.html) (`>=25.10.4`) installed and on your `PATH`.\n2. [Docker](https://docs.docker.com/get-docker/) installed and running (`docker info` should succeed). This pipeline's tools ship as ready-to-use Docker images, so Docker is the only container engine to install — there is nothing to build yourself.\n3. The license-gated software/model weights that a few of the tools need (InterProScan's database, and DeepTMHMM/SignalP6/DeepLoc2's model weights) — these cannot legally be bundled in the Docker images and must be downloaded by you. See [`docs/software-setup.md`](docs/software-setup.md) for exactly what to download, from where, and where to place it before your first real run.\n4. A [samplesheet](#samplesheet) listing the protein FASTA file(s) you want to analyse (see below).\n\n### Quick check: run the bundled test data first\n\nBefore pointing the pipeline at your own data, confirm your Nextflow/Docker setup works end to end using the small dataset bundled with the pipeline (a handful of real sequences, finishes in a few minutes and downloads all Docker images automatically):\n\n```bash\nnextflow run omatheuspimenta/rgaprofiler \\\n   -profile docker,test \\\n   --interproscan_db /path/to/interproscan-5.XX-YY.0 \\\n   --outdir results_test\n```\n\n`--interproscan_db` is the one input this quick check still needs from you — see [`docs/software-setup.md`](docs/software-setup.md#interproscan) for how to obtain it. If this finishes without errors, your setup is ready for real data below.\n\n### Samplesheet\n\nFirst, prepare a samplesheet with your input data that looks as follows:\n\n`samplesheet.csv`:\n\n```csv\nsample,fasta\nsample1,/path/to/sample1.protein.fasta\n```\n\nEach row is one protein FASTA to profile. `sample` is a free-form identifier; `fasta` must exist and end in `.fa`/`.fasta` (optionally gzipped).\n\nYou'll also need the license-gated software/databases each tool expects under `--softwares_dir` (default `./softwares`) — see [`docs/software-setup.md`](docs/software-setup.md) for exactly what to download and where to put it, and `--interproscan_db` pointed at your InterProScan database directory (no default, since it varies per install).\n\nNow, you can run the pipeline using:\n\n```bash\nnextflow run omatheuspimenta/rgaprofiler \\\n   -profile docker \\\n   --input samplesheet.csv \\\n   --interproscan_db /path/to/interproscan-5.XX-YY.0 \\\n   --outdir <OUTDIR>\n```\n\n`-profile docker` is what this pipeline is built and tested with — see the [prerequisites](#prerequisites) above. If your institution provides its own [nf-core/configs](https://github.com/nf-core/configs) profile, you can add it alongside, e.g. `-profile docker,<institute>`.\n\n> [!WARNING]\n> Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).\n\n## Credits\n\nomatheuspimenta/rgaprofiler was originally written by Pimenta-Zanon, M. H..\n\n## Contributions and Support\n\nIf you would like to contribute to this pipeline, please see the [contributing guidelines](docs/CONTRIBUTING.md).\n\n## Citations\n\n<!-- Add a Zenodo DOI citation here after the pipeline's first tagged release, and a matching \"Cite with Zenodo\" badge at the top of this file. -->\n\nAn extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.\n\nThis pipeline uses code and infrastructure developed and maintained by the [nf-core](https://nf-co.re) community, reused here under the [MIT license](https://github.com/nf-core/tools/blob/main/LICENSE).\n\n> **The nf-core framework for community-curated bioinformatics pipelines.**\n>\n> Philip Ewels, Alexander Peltzer, Sven Fillinger, Harshil Patel, Johannes Alneberg, Andreas Wilm, Maxime Ulysse Garcia, Paolo Di Tommaso & Sven Nahnsen.\n>\n> _Nat Biotechnol._ 2020 Feb 13. doi: [10.1038/s41587-020-0439-x](https://dx.doi.org/10.1038/s41587-020-0439-x).\n",
             "hasPart": [
                 {
                     "@id": "main.nf"
@@ -32,10 +32,19 @@
                     "@id": "assets/"
                 },
                 {
+                    "@id": "bin/"
+                },
+                {
                     "@id": "conf/"
                 },
                 {
                     "@id": "docs/"
+                },
+                {
+                    "@id": "modules/"
+                },
+                {
+                    "@id": "modules/local/"
                 },
                 {
                     "@id": "workflows/"
@@ -57,6 +66,9 @@
                 },
                 {
                     "@id": "LICENSE"
+                },
+                {
+                    "@id": "CODE_OF_CONDUCT.md"
                 },
                 {
                     "@id": "CITATIONS.md"
@@ -87,7 +99,7 @@
             },
             "mentions": [
                 {
-                    "@id": "#80e6a93b-8693-4b79-9718-25cc12554bee"
+                    "@id": "#92457ca1-d352-49dc-9ce6-ecddd06c91ea"
                 }
             ],
             "name": "omatheuspimenta/rgaprofiler"
@@ -114,16 +126,13 @@
                 "SoftwareSourceCode",
                 "ComputationalWorkflow"
             ],
-            "contributor": [
+            "author": [
                 {
-                    "@id": "#78b91e7e-e2a4-4917-b5ad-22439ef0b53a"
-                },
-                {
-                    "@id": "#66231283-bcbd-48e2-b1b1-62fad916fbb8"
+                    "@id": "#56a876ee-47d9-47f0-bd28-898c07aeaa22"
                 }
             ],
             "dateCreated": "",
-            "dateModified": "2026-08-06T11:10:29Z",
+            "dateModified": "2026-08-29T08:36:41Z",
             "dct:conformsTo": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE/",
             "keywords": [
                 "nf-core",
@@ -131,6 +140,11 @@
             ],
             "license": [
                 "MIT"
+            ],
+            "maintainer": [
+                {
+                    "@id": "#56a876ee-47d9-47f0-bd28-898c07aeaa22"
+                }
             ],
             "name": [
                 "omatheuspimenta/rgaprofiler"
@@ -162,11 +176,11 @@
             "version": "!>=25.10.4"
         },
         {
-            "@id": "#80e6a93b-8693-4b79-9718-25cc12554bee",
+            "@id": "#92457ca1-d352-49dc-9ce6-ecddd06c91ea",
             "@type": "TestSuite",
             "instance": [
                 {
-                    "@id": "#c41a121d-d007-45ae-9a42-bb1522a98ac2"
+                    "@id": "#7c089d61-9354-4a40-8c30-15dd3f8f4946"
                 }
             ],
             "mainEntity": {
@@ -175,7 +189,7 @@
             "name": "Test suite for omatheuspimenta/rgaprofiler"
         },
         {
-            "@id": "#c41a121d-d007-45ae-9a42-bb1522a98ac2",
+            "@id": "#7c089d61-9354-4a40-8c30-15dd3f8f4946",
             "@type": "TestInstance",
             "name": "GitHub Actions workflow for testing omatheuspimenta/rgaprofiler",
             "resource": "repos/omatheuspimenta/rgaprofiler/actions/workflows/nf-test.yml",
@@ -198,6 +212,11 @@
             "description": "Additional files"
         },
         {
+            "@id": "bin/",
+            "@type": "Dataset",
+            "description": "Scripts that must be callable from a pipeline process"
+        },
+        {
             "@id": "conf/",
             "@type": "Dataset",
             "description": "Configuration files"
@@ -206,6 +225,16 @@
             "@id": "docs/",
             "@type": "Dataset",
             "description": "Markdown files for documenting the pipeline"
+        },
+        {
+            "@id": "modules/",
+            "@type": "Dataset",
+            "description": "Modules used by the pipeline"
+        },
+        {
+            "@id": "modules/local/",
+            "@type": "Dataset",
+            "description": "Pipeline-specific modules"
         },
         {
             "@id": "workflows/",
@@ -241,6 +270,11 @@
             "@id": "LICENSE",
             "@type": "File",
             "description": "The license - should be MIT"
+        },
+        {
+            "@id": "CODE_OF_CONDUCT.md",
+            "@type": "File",
+            "description": "The nf-core code of conduct"
         },
         {
             "@id": "CITATIONS.md",
@@ -284,14 +318,10 @@
             "url": "https://nf-co.re/"
         },
         {
-            "@id": "#78b91e7e-e2a4-4917-b5ad-22439ef0b53a",
+            "@id": "#56a876ee-47d9-47f0-bd28-898c07aeaa22",
             "@type": "Person",
-            "name": "Pimenta-Zanon"
-        },
-        {
-            "@id": "#66231283-bcbd-48e2-b1b1-62fad916fbb8",
-            "@type": "Person",
-            "name": "M. H."
+            "name": "Pimenta-Zanon, M. H.",
+            "url": "https://github.com/omatheuspimenta"
         }
     ]
 }

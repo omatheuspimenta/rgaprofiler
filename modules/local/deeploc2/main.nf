@@ -4,8 +4,8 @@ process DEEPLOC2 {
     label 'process_gpu' // DeepLoc2 supports GPU execution; see params.use_gpu / docs/software-setup.md
 
     // Set container to use for this process
-    container 'deeploc2:baseline'
-    // container 'ghcr.io/omatheuspimenta/deeploc2:1.0.0'
+    container 'ghcr.io/omatheuspimenta/deeploc2:1.0.0'
+    // container 'deeploc2:baseline' // local dev build
 
     input:
     tuple val(meta), path(fasta)

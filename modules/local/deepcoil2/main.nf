@@ -4,8 +4,8 @@ process DEEPCOIL2 {
     label 'process_gpu' // DeepCoil2 supports GPU execution; see params.use_gpu / docs/software-setup.md
 
     // Set container to use for this process
-    container 'deepcoil:nextflow'
-    // container 'ghcr.io/omatheuspimenta/deepcoil2:2.0.2'
+    container 'ghcr.io/omatheuspimenta/deepcoil2:2.0.2'
+    // container 'deepcoil:nextflow' // local dev build
 
     input:
     // Load the input fasta file and metadata. One chuck of fasta file is processed at a time.

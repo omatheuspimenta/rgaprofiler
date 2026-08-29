@@ -1,2 +1,0 @@
-task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-1	df/54d08e	1630228	DEEPTMHMM (r570_subsample)	COMPLETED	0	2026-08-28 22:58:35.866	16.2s	15.2s	2939.5%	5.5 GB	32 GB	2.7 GB	7.9 MB

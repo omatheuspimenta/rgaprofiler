@@ -1,5 +1,0 @@
-[PIPELINE] omatheuspimenta/rgaprofiler 1.0.0dev | profile=docker
-[WORKDIR] /dados04/matheus/rgaprofiler/omatheuspimenta-rgaprofiler/.nf-test/tests/c26673347d75b133a897ba22f30093d1/work
-[PROCESS df/54d08e] DEEPTMHMM (r570_subsample)
-
-[SUCCESS] completed=1 failed=0 cached=0

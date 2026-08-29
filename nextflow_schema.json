@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/omatheuspimenta/rgaprofiler/master/nextflow_schema.json",
+    "$id": "https://raw.githubusercontent.com/omatheuspimenta/rgaprofiler/main/nextflow_schema.json",
     "title": "omatheuspimenta/rgaprofiler pipeline parameters",
-    "description": "rgarofiler is a Nextflow pipeline for the comprehensive identification, annotation, and classification of Resistance Gene Analogs (RGAs) from protein sequences. The workflow integrates multiple state-of-the-art prediction tools, including DeepCoil2 (coiled-coil domains), DeepTMHMM (transmembrane helices), InterProScan (protein domains and functional annotation), SignalP 6.0 (signal peptides), DeepLoc (subcellular localization), and Phobius (signal peptides and transmembrane topology). The resulting annotations are processed by custom Python scripts to classify proteins into RGA classes based on their predicted structural and functional features.",
+    "description": "rgaprofiler is a Nextflow pipeline for the comprehensive identification, annotation, and classification of Resistance Gene Analogs (RGAs) from protein sequences. The workflow integrates multiple state-of-the-art prediction tools, including DeepCoil2 (coiled-coil domains), DeepTMHMM (transmembrane helices), InterProScan (protein domains and functional annotation), SignalP 6.0 (signal peptides), DeepLoc (subcellular localization), and Phobius (signal peptides and transmembrane topology). The resulting annotations are processed by custom Python scripts to classify proteins into RGA classes based on their predicted structural and functional features.",
     "type": "object",
     "$defs": {
         "input_output_options": {

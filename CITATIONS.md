@@ -38,9 +38,9 @@
 
   > Hallgren J, Tsirigos KD, Pedersen MD, Almagro Armenteros JJ, Marcatili P, Nielsen H, Krogh A, Winther O. DeepTMHMM predicts alpha and beta transmembrane proteins using deep neural networks. bioRxiv. 2022. doi: 10.1101/2022.04.08.487609.
 
-- [SugarcaneTranscriptomics RGA classification](https://github.com/omatheuspimenta/SugarcaneTranscriptomics) (the rule-based logic `RGA_CLASSIFY` vendors, combining all six tools above into per-protein RGA family/subclass calls)
+- [rgapredictor RGA classification](https://github.com/omatheuspimenta/rgapredictor) (the rule-based logic `RGA_CLASSIFY` vendors, combining all six tools above into per-protein RGA family/subclass calls)
 
-  > Pimenta-Zanon MH. SugarcaneTranscriptomics: RGA (Resistance Gene Analog) classification. https://github.com/omatheuspimenta/SugarcaneTranscriptomics
+  > Pimenta-Zanon MH. rgapredictor: RGA (Resistance Gene Analog) classification. https://github.com/omatheuspimenta/rgapredictor
 
 ## Software packaging/containerisation tools
 
