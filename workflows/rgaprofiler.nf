@@ -5,7 +5,11 @@
 */
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { logColours             } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_rgaprofiler_pipeline'
+
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.ConcurrentHashMap
 
 include { FASTA_QC           } from '../modules/local/fasta_qc'
 include { DEEPCOIL2          } from '../modules/local/deepcoil2'
@@ -97,6 +101,64 @@ workflow RGAPROFILER {
     def ch_versions = channel.empty()
 
     //
+    // Progress logging (nf-core/rnaseq-style): plain log.info lines announcing the
+    // current stage and a running "done/total" count per sample. This exists
+    // alongside -- not instead of -- Nextflow's own live process table, because that
+    // table is a redrawing ANSI widget: it's illegible once written to a plain file,
+    // which is exactly what happens on a `-bg`/detached run (see docs/usage.md). These
+    // lines are just plain stdout, so they read fine in `.nextflow.log` / a redirected
+    // log file, not only on an interactive terminal.
+    //
+    def pipeline_stages = [
+        'FASTA_QC', 'DEEPCOIL2', 'PHOBIUS', 'INTERPROSCAN', 'INTERPROSCAN_MERGE',
+        'DEEPLOC2', 'SIGNALP6', 'DEEPTMHMM', 'RGA_CLASSIFY', 'RGA_REPORT',
+    ]
+    def n_stages = pipeline_stages.size()
+    // Same palette + params.monochrome_logs gate the nf-core completion summary already
+    // uses (subworkflows/nf-core/utils_nfcore_pipeline's completionSummary) -- reused here
+    // so progress logs match it and get disabled together with `--monochrome_logs`.
+    def colors = logColours(params.monochrome_logs) as Map
+
+    // Resolved asynchronously (channel.count() only emits once the upstream channel
+    // closes) but in practice ready almost immediately: the samplesheet is a small,
+    // already-in-memory list, not something fetched/streamed sample by sample.
+    def total_samples = new AtomicInteger(0)
+    ch_samplesheet.count().subscribe { n ->
+        total_samples.set(n as int)
+        log.info ''
+        log.info "${colors.bold}${colors.purple}${'=' * 60}${colors.reset}"
+        log.info "${colors.bold}  RGAprofiler:${colors.reset} starting analysis of ${colors.bcyan}${n}${colors.reset} sample(s)"
+        log.info "${colors.bold}  Stages${colors.reset} (${n_stages}): ${colors.dim}${pipeline_stages.join(' -> ')}${colors.reset}"
+        log.info "${colors.bold}${colors.purple}${'=' * 60}${colors.reset}"
+    }
+
+    def stage_started  = new ConcurrentHashMap()
+    def stage_counters = new ConcurrentHashMap()
+
+    // Logs one "<sample> done (X/Y)" line per completed sample/chunk for `stage`, plus
+    // a one-off "started" line the first time the stage is seen and a "complete" line
+    // once every expected item has reported in. `total_override` lets INTERPROSCAN
+    // (which fans out per FASTA chunk, not per sample) report against the chunk count
+    // instead of the sample count; every other stage just uses total_samples.
+    def logStageProgress = { String stage, String sample_id, Integer total_override = null ->
+        def idx = pipeline_stages.indexOf(stage) + 1
+        def tag = "${colors.bold}${colors.blue}[Stage ${idx}/${n_stages}]${colors.reset}"
+        if (stage_started.putIfAbsent(stage, true) == null) {
+            log.info ''
+            log.info "${tag} ${colors.bold}${stage}${colors.reset} started"
+        }
+        def counter = stage_counters.computeIfAbsent(stage) { new AtomicInteger(0) }
+        def done = counter.incrementAndGet()
+        def total = total_override != null ? total_override : total_samples.get()
+        def total_display = total > 0 ? total.toString() : '?'
+        def remaining = total > done ? total - done : 0
+        log.info "${tag} ${stage}: ${colors.bcyan}${sample_id}${colors.reset} done (${colors.yellow}${done}/${total_display}${colors.reset} complete, ${colors.yellow}${remaining}${colors.reset} remaining)"
+        if (total > 0 && done >= total) {
+            log.info "${tag} ${colors.bold}${colors.green}${stage} complete (${done}/${total}) ✔${colors.reset}"
+        }
+    }
+
+    //
     // Clean the input FASTA (dedup, strip stop-codon '*', uppercase) before handing
     // it to any prediction tool — real proteome FASTAs need this (e.g. trailing '*'
     // breaks Phobius/InterProScan). Chunk output feeds INTERPROSCAN's fan-out below;
@@ -105,15 +167,18 @@ workflow RGAPROFILER {
     //
     FASTA_QC(ch_samplesheet, params.fasta_qc_chunk_size)
     ch_versions = ch_versions.mix(FASTA_QC.out.versions)
+    FASTA_QC.out.fasta.subscribe { meta, fasta -> logStageProgress('FASTA_QC', meta.id) }
 
     //
     // Run per-tool prediction modules
     //
     DEEPCOIL2(FASTA_QC.out.fasta)
     ch_versions = ch_versions.mix(DEEPCOIL2.out.versions)
+    DEEPCOIL2.out.results_dir.subscribe { meta, dir -> logStageProgress('DEEPCOIL2', meta.id) }
 
     PHOBIUS(FASTA_QC.out.fasta)
     ch_versions = ch_versions.mix(PHOBIUS.out.versions)
+    PHOBIUS.out.predictions.subscribe { meta, preds -> logStageProgress('PHOBIUS', meta.id) }
 
     //
     // InterProScan scales much better as many smaller parallel jobs than one huge
@@ -125,19 +190,29 @@ workflow RGAPROFILER {
     // an exact, lossless merge) — nothing downstream needs to know chunking happened.
     //
     def ch_ipr_chunks = FASTA_QC.out.chunks.transpose()
+    // Resolved asynchronously, same caveat as total_samples above: reads as '?' in the
+    // progress log until every sample has finished FASTA_QC and the chunk count is final.
+    def total_chunks = new AtomicInteger(0)
+    ch_ipr_chunks.count().subscribe { n -> total_chunks.set(n as int) }
+
     INTERPROSCAN(ch_ipr_chunks, ipr_dir)
     ch_versions = ch_versions.mix(INTERPROSCAN.out.versions)
+    INTERPROSCAN.out.tsv.subscribe { meta, tsv -> logStageProgress('INTERPROSCAN', meta.id, total_chunks.get()) }
 
     INTERPROSCAN_MERGE(INTERPROSCAN.out.tsv.groupTuple())
+    INTERPROSCAN_MERGE.out.tsv.subscribe { meta, tsv -> logStageProgress('INTERPROSCAN_MERGE', meta.id) }
 
     DEEPLOC2(FASTA_QC.out.fasta, deeploc2_models, deeploc2_torch_cache)
     ch_versions = ch_versions.mix(DEEPLOC2.out.versions)
+    DEEPLOC2.out.predictions.subscribe { meta, preds -> logStageProgress('DEEPLOC2', meta.id) }
 
     SIGNALP6(FASTA_QC.out.fasta, signalp6_models)
     ch_versions = ch_versions.mix(SIGNALP6.out.versions)
+    SIGNALP6.out.predictions.subscribe { meta, preds -> logStageProgress('SIGNALP6', meta.id) }
 
     DEEPTMHMM(FASTA_QC.out.fasta, deeptmhmm_weights)
     ch_versions = ch_versions.mix(DEEPTMHMM.out.versions)
+    DEEPTMHMM.out.predictions.subscribe { meta, preds -> logStageProgress('DEEPTMHMM', meta.id) }
 
     //
     // Classify proteins into RGA families/subclasses from the six tools' outputs above
@@ -159,6 +234,7 @@ workflow RGAPROFILER {
 
     RGA_CLASSIFY(ch_rga_classify_input)
     ch_versions = ch_versions.mix(RGA_CLASSIFY.out.versions)
+    RGA_CLASSIFY.out.results.subscribe { meta, files -> logStageProgress('RGA_CLASSIFY', meta.id) }
 
     //
     // Render the lightweight custom summary report (decision #3, PLAN.md -- no MultiQC).
@@ -182,6 +258,7 @@ workflow RGAPROFILER {
 
     RGA_REPORT(ch_rga_report_input)
     ch_versions = ch_versions.mix(RGA_REPORT.out.versions)
+    RGA_REPORT.out.report.subscribe { meta, files -> logStageProgress('RGA_REPORT', meta.id) }
 
     //
     // Collate and save software versions
