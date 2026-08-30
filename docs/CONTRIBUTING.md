@@ -91,13 +91,13 @@ Please also refer to the [pipeline-specific contribution guidelines](#pipeline-s
 
 - [ ] Define the corresponding [input channel](#channel-naming-schemes) into your new process from the expected previous process channel.
 - [ ] Install a module with nf-core/tools, or write a local module (see [default processes resource requirements](#default-processes-resource-requirements)), and add it to the target `<workflow>.nf`.
-- [ ] Define the output channel if needed. Mix the version output channel into `ch_versions` and relevant files into `ch_multiqc`.
+- [ ] Define the output channel if needed. Mix the version output channel into `ch_versions` (this pipeline does not use MultiQC, so there is no `ch_multiqc` to mix into — see `docs/output.md`).
 - [ ] Add new or updated parameters to `nextflow.config` with a [default value](#default-parameter-values).
 - [ ] Add new or updated parameters and relevant help text to `nextflow_schema.json` with [nf-core/tools](#default-parameter-values).
-- [ ] Add validation for relevant parameters to the pipeline utilisation section of `utils_nfcore_\_pipeline/main.nf` subworkflow.
+- [ ] Add validation for relevant parameters to the pipeline utilisation section of the `utils_nfcore_rgaprofiler_pipeline/main.nf` subworkflow.
 - [ ] Perform local tests to validate that the new code works as expected.
   - [ ] If applicable, add a new test in the `tests` directory.
-- [ ] Update `usage.md`, `output.md`, and `citation.md` as appropriate.
+- [ ] Update `usage.md`, `output.md`, and `CITATIONS.md` as appropriate.
 - [ ] [Lint](#lint-tests) the code with nf-core/tools.
 - [ ] Update any diagrams or pipeline images as necessary.
 
@@ -149,4 +149,7 @@ If you update images or graphics, follow the nf-core [style guidelines](https://
 
 ## Pipeline specific contribution guidelines
 
-<!-- TODO nf-core: Add any pipeline specific contribution guidelines here, such as coding styles, procedures, checklists etc. -->
+- This pipeline does not use MultiQC or iGenomes (see `.nf-core.yml`'s `skip_features`); don't reintroduce `ch_multiqc`-style channels or genome-reference parameters when following the general nf-core conventions above.
+- Every tool this pipeline wraps ships as this pipeline's own Docker image on GHCR (`ghcr.io/omatheuspimenta/<tool>:<tag>`), not a biocontainers/bioconda image — see [`docs/publishing-docker-images.md`](publishing-docker-images.md) before adding or changing a module's container.
+- License-gated software (InterProScan's database, DeepTMHMM/SignalP6/DeepLoc2's model weights) is never baked into an image or committed to this repository — see [`docs/software-setup.md`](software-setup.md) for how it's supplied and validated at runtime instead.
+- The RGA classification ruleset (accessions, thresholds, rules) lives entirely in `docker/rga_classify/src/code/rgas/config/rga_config.yaml`, not in Python code — see [`docs/usage.md`](usage.md#running-on-another-organism-or-with-different-classification-parameters) before changing classification behaviour.

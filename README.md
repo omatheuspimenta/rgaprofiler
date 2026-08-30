@@ -19,6 +19,13 @@
 
 DeepCoil2, DeepLoc2, SignalP6, and DeepTMHMM can run on a GPU (`--use_gpu`); Phobius, InterProScan, and the RGA classification/report steps are CPU-only. Several of the underlying tools (InterProScan's database, DeepTMHMM/SignalP6/DeepLoc2's model weights) are license-gated and must be downloaded separately by the user — see [`docs/software-setup.md`](docs/software-setup.md).
 
+The pipeline itself is **organism-agnostic** — it runs on any protein FASTA, plant or
+otherwise, with no organism/genome parameter to set. Only the RGA classification ruleset
+(which domain accessions and thresholds define each RGA family, calibrated by default
+against the sugarcane R570 proteome) is plant-specific, and it's fully configurable — see
+[Running on another organism, or with different classification parameters](docs/usage.md#running-on-another-organism-or-with-different-classification-parameters)
+in `docs/usage.md`.
+
 ## Usage
 
 > [!NOTE]

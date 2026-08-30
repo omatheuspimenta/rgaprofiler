@@ -219,6 +219,146 @@ finishes for every sample it prints the actual resulting chunk count — look fo
 `Sequence batching:` lines. `--outdir/fasta/<sample>_clean_chunks/` also holds the chunk
 FASTA files themselves if you want to inspect them directly.
 
+## Running on another organism, or with different classification parameters
+
+This pipeline is **organism-agnostic**: it takes a protein FASTA in, not a genome or a
+species-specific reference. There is no `--organism`/`--species`/`--genome` parameter to
+set, and (unlike genome-based nf-core pipelines) nothing in `nextflow_schema.json` needs
+touching to point the pipeline at a different species.
+
+- **`FASTA_QC` and all six prediction tools** (DeepCoil2, Phobius, InterProScan, DeepLoc2,
+  SignalP6, DeepTMHMM) are general-purpose protein predictors — they run identically
+  regardless of which organism the input proteins came from. To run on a different
+  organism, list its protein FASTA(s) in the samplesheet (see
+  [Samplesheet input](#samplesheet-input) above) and run the pipeline exactly as
+  documented — nothing else changes.
+- **`--interproscan_db`** is InterProScan's member-database data (Pfam, PANTHER, Gene3D,
+  …). It is not organism- or clade-specific — the same install works for every taxon
+  InterProScan supports — so it never needs to change per organism either.
+
+The **one** organism-specific piece of the whole pipeline is the RGA classification
+ruleset itself: which InterProScan accessions count as which feature (NB-ARC, TIR, LRR,
+…), the coiled-coil score threshold, the consensus policies, and the ordered
+family/subclass rules built on top of them. All of it lives in one file, vendored from
+[`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor):
+
+```
+docker/rga_classify/src/code/rgas/config/rga_config.yaml
+```
+
+That file's own header states the intent directly: _"Everything that is organism-,
+database- or threshold-specific lives here. The Python code contains NO accessions and
+NO magic numbers."_ — `rgas_prediction.py` (the script `RGA_CLASSIFY` runs) never hard-codes
+a domain accession or a cut-off; it only reads this file. Every default in it was
+calibrated against the pipeline's own reference dataset (the R570 sugarcane proteome),
+so it works out of the box for plant RGA calling in general, but individual values may
+need revisiting for a different plant lineage — or for a non-plant genome. `rga_config.yaml`
+is heavily commented with the rationale for every threshold and rule; skim it before
+changing anything, since several of the choices documented there (e.g. the CC threshold
+below) are deliberate judgement calls, not tool-recommended defaults.
+
+> [!NOTE]
+> The file's header also points to `docs/rga/README.md` for a fuller "how to adapt to
+> another organism" walkthrough. That document is part of the upstream
+> [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor) project, not of this
+> pipeline's own vendored copy or its `docs/` folder — it is not available here. The
+> sections below are this pipeline's own self-contained equivalent.
+
+### What to check when adapting to a new organism
+
+Open `rga_config.yaml` and look at, in likely order of relevance:
+
+- **`interproscan_features`** — the Pfam/InterPro/SMART/PROSITE/PRINTS/Gene3D accessions
+  that count as evidence for each feature (`NB-ARC`, `TIR`, `RPW8`, `LRR`, `STTK`, `LysM`,
+  `CC`). These are curated domain models, not R570-specific calls, so most of them apply
+  to any plant proteome unchanged. The file gives a worked example of when this is
+  **not** true: NACHT (`PF05729`/`IPR007111`) is currently kept out of `NB-ARC` and only
+  reported via `watch_accessions`, because it never fires in sugarcane — but NACHT NLRs
+  are the norm in fungal and animal genomes, so classifying those would mean moving it
+  into `interproscan_features.NB-ARC` first.
+- **`coiled_coil.threshold`** (default `0.5`) — explicitly documented as "a deliberate
+  midpoint choice", not a value DeepCoil2 itself recommends. If you have an
+  organism-appropriate reference (the file uses the Rx N-terminal domain, `PF18052`, as
+  its own precision/recall check), re-tuning this threshold against it is worth doing
+  before trusting CNL/CN/TM-CC calls on a new species.
+- **`rules`** — the ordered, mutually-exclusive family/subclass rules (`CNL`, `TNL`,
+  `RNL`, `LRR-RLK`, …). These encode standard NLR/RLK/RLP nomenclature and are reusable
+  across plants as-is, but two spots are called out in-file as organism/method choices
+  rather than fixed logic: the `other-RLK` rule (priority 13) ships **commented out**
+  because the pipeline's sugarcane-specific default (Rody et al. 2019) excludes it —
+  uncomment it for RGAugury-style scope instead; and the `any_of: [[TM, SP]]` extension
+  on the `LRR-RLP`/`LysM-RLP` rules is documented as an addition beyond the published
+  rule, with the one-line change to revert it noted right above the rules.
+- **`ids.locus_regex`** — matches R570's own protein-ID convention
+  (`SoffiXsponR570.7os1g018900.1.p` → locus `SoffiXsponR570.7os1g018900`) to build the
+  locus-level summary (`rga_predictions_by_locus.tsv`). This **will** need updating to
+  match your organism's own annotation ID format, or locus-level collapsing will be
+  silently wrong (or empty) for anything but R570-style IDs.
+- **`ectodomain_features`** and the `deeploc` localisation lists — extend these if your
+  organism's receptors rely on ectodomains or subcellular compartments the defaults
+  don't cover.
+
+### How to apply a change
+
+Three options, in increasing order of how much of the ruleset you're changing:
+
+**1. Tune a handful of values, no file edit at all.** Everything under
+`consensus_group` in `rgas_prediction.py --help` is a plain CLI flag with no file/path
+involved, so it can be passed straight through via `task.ext.args` in a custom config
+(`-c custom.config`, never via `-params-file`/`--flag`, see the
+[warning above](#running-the-pipeline)):
+
+```groovy title="custom.config"
+process {
+    withName: 'RGA_CLASSIFY' {
+        ext.args = '--cc-threshold 0.6 --tm-policy union --min-lrr-copies 2'
+    }
+}
+```
+
+```bash
+nextflow run . -profile docker --input samplesheet.csv \
+    --interproscan_db /path/to/interproscan-5.XX-YY.0 \
+    --outdir results -c custom.config
+```
+
+Available flags: `--tm-policy`, `--sp-policy`, `--cc-policy`, `--cc-threshold`,
+`--cc-min-length`, `--cc-max-gap`, `--min-lrr-copies`, `--rga-only`/`--keep-non-rga`.
+
+**2. Point at your own full `rga_config.yaml`, no image rebuild.** Copy
+`docker/rga_classify/src/code/rgas/config/rga_config.yaml`, edit your copy, and pass
+`--config` — but unlike the paths this pipeline resolves through its own Nextflow
+`path` process inputs (e.g. `--interproscan_db`, `--softwares_dir`), a raw host path
+inside `ext.args` is **not** automatically bind-mounted into the container, so add it to
+`containerOptions` explicitly:
+
+```groovy title="custom.config"
+process {
+    withName: 'RGA_CLASSIFY' {
+        ext.args = '--config /abs/path/to/my_organism_config.yaml'
+        containerOptions = '-v /abs/path/to:/abs/path/to'
+    }
+}
+```
+
+**3. Make it the pipeline's own default.** Edit
+`docker/rga_classify/src/code/rgas/config/rga_config.yaml` directly in this repo, then
+rebuild and publish a new `rga_classify` image (and bump its tag) following
+[`docs/publishing-docker-images.md`](publishing-docker-images.md) — update the `container`
+line in both `modules/local/rga_classify/main.nf` and `modules/local/rga_report/main.nf`
+(it deliberately reuses the same image) to point at the new tag. This is the right choice
+once a new organism's config is settled and you want every future run to use it without
+passing `-c`/`ext.args` at all.
+
+### Different pipeline-level parameters
+
+The above is about the RGA *classification* ruleset. For tuning the wrapper pipeline
+itself instead — chunking (`--num_blocks`/`--fasta_qc_chunk_size`), GPU usage
+(`--use_gpu`), or where license-gated software lives (`--softwares_dir`) — see
+[Sequence batching](#sequence-batching---num_blocks) above and the full parameter
+reference generated from `nextflow_schema.json`; none of those are organism-specific
+either.
+
 ## Core Nextflow arguments
 
 > [!NOTE]
@@ -307,15 +447,39 @@ To change the resource requests, please see the [max resources](https://nf-co.re
 
 ### Custom Containers
 
-In some cases, you may wish to change the container or conda environment used by a pipeline steps for a particular tool. By default, nf-core pipelines use containers and software from the [biocontainers](https://biocontainers.pro/) or [bioconda](https://bioconda.github.io/) projects. However, in some cases the pipeline specified version maybe out of date.
+Unlike most nf-core pipelines, this one does **not** pull from
+[biocontainers](https://biocontainers.pro/)/[bioconda](https://bioconda.github.io/) —
+none of DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6, DeepTMHMM or `rga_classify`
+are packaged there. Every module's `container` directive instead points at this
+pipeline's own image on GHCR (`ghcr.io/omatheuspimenta/<tool>:<tag>`), built from the
+Dockerfiles under `docker/`; conda is not a supported alternative either (see
+[`-profile`](#-profile) above — only `FASTA_QC` declares a conda environment).
 
-To use a different container from the default container or conda environment specified in a pipeline, please see the [updating tool versions](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#update-tool-versions) section of the nf-core website.
+To use a different image tag for a tool, override that module's `container` directive
+via a custom config (`-c custom.config`), e.g.
+`process { withName: 'DEEPTMHMM' { container = 'ghcr.io/omatheuspimenta/deeptmhmm:my-tag' } }`.
+To change what an image actually contains, edit the corresponding `docker/<tool>/Dockerfile`
+and rebuild/publish it yourself — see
+[`docs/publishing-docker-images.md`](publishing-docker-images.md).
 
 ### Custom Tool Arguments
 
-A pipeline might not always support every possible argument or option of a particular tool used in pipeline. Fortunately, nf-core pipelines provide some freedom to users to insert additional parameters that the pipeline does not include by default.
+Every module accepts extra CLI flags for its underlying tool via `task.ext.args`, set
+per-process in a custom config (`-c custom.config`, not `-params-file`/`--flag` — see the
+[warning above](#running-the-pipeline)):
 
-To learn how to provide additional arguments to a particular tool of the pipeline, please see the [customising tool arguments](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#modifying-tool-arguments) section of the nf-core website.
+```groovy title="custom.config"
+process {
+    withName: 'SIGNALP6' {
+        ext.args = '--mode fast'
+    }
+}
+```
+
+See [`conf/modules.config`](../conf/modules.config) for this pipeline's own `ext.args`
+usage, and the
+["Running on another organism"](#running-on-another-organism-or-with-different-classification-parameters)
+section above for a worked example on `RGA_CLASSIFY` specifically.
 
 ### nf-core/configs
 
