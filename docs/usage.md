@@ -97,10 +97,23 @@ Pipeline settings can be provided in a `yaml` or `json` file via `-params-file <
 > [!WARNING]
 > Do not use `-c <file>` to specify parameters as this will result in errors. Custom config files specified with `-c` must only be used for [tuning process resource specifications](https://nf-co.re/docs/running/run-pipelines#configuring-pipelines), other infrastructural tweaks (such as output directories), or module arguments (args).
 
+> [!TIP]
+> **A params file is the recommended way to set this pipeline's typed parameters**
+> (`--num_blocks`, `--use_gpu`, etc.), not just a convenience for reuse. Since
+> Nextflow 26.04's v2 syntax parser, every `--flag value` given on the CLI is
+> parsed as a plain string — `--num_blocks 1000` arrives as `"1000"`, not the
+> integer `1000`. This pipeline validates and casts CLI values back to their
+> declared schema type (via nf-schema's `cast_cli_params`, `nf-schema>=2.7.2`),
+> so plain CLI flags like the ones used throughout this doc work correctly —
+> but a params file sidesteps the whole issue by preserving the real type from
+> the start, with no plugin behavior to rely on. See
+> [this nf-core blog post](https://nf-co.re/blog/2026/parameter-types) for the
+> full explanation.
+
 The above pipeline run specified with a params file in yaml format:
 
 ```bash
-nextflow run omatheuspimenta/rgaprofiler -profile docker -params-file params.yaml
+nextflow run omatheuspimenta/rgaprofiler -profile docker,long_running -params-file params.yaml
 ```
 
 with:
@@ -108,8 +121,13 @@ with:
 ```yaml title="params.yaml"
 input: './samplesheet.csv'
 outdir: './results/'
-<...>
+interproscan_db: '/path/to/interproscan-5.78-109.0'
+num_blocks: 1000
+use_gpu: 'auto'
 ```
+
+A filled-in copy of this is committed at [`assets/params.example.yml`](../assets/params.example.yml)
+— copy it and edit the paths rather than starting from scratch.
 
 You can also generate such `YAML`/`JSON` files via [nf-core/launch](https://nf-co.re/launch).
 
@@ -229,9 +247,17 @@ They are loaded in sequence, so later profiles can overwrite earlier profiles.
 
 If `-profile` is not specified, the pipeline will run locally and expect all software to be installed and available on the `PATH`. This is _not_ recommended, since it can lead to different results on different machines dependent on the computer environment.
 
+> [!NOTE]
+> The list below is every profile actually defined in this pipeline's `nextflow.config` —
+> checked against the file directly, not copied from the generic nf-core template. If you
+> spot one here that doesn't match, `grep -A2 "^profiles {" nextflow.config` is the source
+> of truth.
+
 - `test`
-  - A profile with a complete configuration for automated testing
-  - Includes links to test data so needs no other parameters
+  - A profile with a complete configuration for automated testing against the small (4-sequence) bundled dataset
+  - Includes links to test data so needs no other parameters (except `--interproscan_db`, always required)
+- `test_full`
+  - Like `test`, but points at the real, full-scale R570 proteome test dataset instead of the small subsample. Pair with `long_running` (see below) — it's too large for the default resource/time budgets.
 - `docker`
   - A generic configuration profile to be used with [Docker](https://docker.com/)
 - `singularity`
@@ -245,9 +271,19 @@ If `-profile` is not specified, the pipeline will run locally and expect all sof
 - `apptainer`
   - A generic configuration profile to be used with [Apptainer](https://apptainer.org/)
 - `wave`
-  - A generic configuration profile to enable [Wave](https://seqera.io/wave/) containers. Use together with one of the above (requires Nextflow `24.03.0-edge` or later).
+  - A generic configuration profile to enable [Wave](https://seqera.io/wave/) containers. Use together with one of the above.
 - `conda`
   - A generic configuration profile to be used with [Conda](https://conda.io/docs/). Please only use Conda as a last resort i.e. when it's not possible to run the pipeline with Docker, Singularity, Podman, Shifter, Charliecloud, or Apptainer.
+- `mamba`
+  - Like `conda`, but installs the environment with [Mamba](https://mamba.readthedocs.io/) instead of Conda's own resolver.
+- `debug`
+  - Developer-oriented profile: dumps environment hashes, keeps `work/` after the run (`cleanup = false`), and prints the hostname before each process. Not needed for normal use.
+- `arm64`
+  - Targets an ARM64 host by building/pulling ARM64 container variants via [Wave](https://seqera.io/wave/) rather than this pipeline's own (x86-64) published images.
+- `emulate_amd64`
+  - The reverse case: forces Docker to run this pipeline's normal (x86-64) images under QEMU emulation on a non-x86-64 host (`--platform=linux/amd64`), instead of `arm64`'s native-build approach.
+- `gpu`
+  - This pipeline-specific profile (not part of the standard nf-core set) is a convenience shortcut for `--use_gpu true` — equivalent to passing that flag directly. Prefer `--use_gpu auto|true|false` (default `auto`; see the main [`README.md`](../README.md)) for anything beyond a quick default-on toggle.
 - `long_running`
   - This pipeline-specific profile (not part of the standard nf-core set) raises every process's time budget to 1–10 days, sized for a real, full-scale proteome rather than the small test dataset. Slow steps (InterProScan, SignalP6, …) can otherwise be killed for running "too long" on real data. Add it alongside your other profiles, e.g. `-profile docker,long_running` — no config file editing needed. See `conf/long_running.config` if you need to raise the numbers even further.
 

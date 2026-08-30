@@ -72,7 +72,7 @@ workflow PIPELINE_INITIALISATION {
         before_text,
         after_text,
         command,
-        false
+        true // cli_typecast: cast CLI params (e.g. --num_blocks 1000) to their schema types
     )
 
     //

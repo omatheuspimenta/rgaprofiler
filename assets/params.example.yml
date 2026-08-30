@@ -1,0 +1,32 @@
+# Example -params-file for omatheuspimenta/rgaprofiler.
+#
+# Run with:
+#   nextflow run . -profile docker,long_running -params-file assets/params.example.yml
+#
+# A params file is the recommended way to set typed parameters (integers,
+# booleans) since Nextflow 26.04's v2 syntax parser: CLI flags like
+# `--num_blocks 1000` are always parsed as plain strings now, whereas a
+# YAML/JSON params file preserves the real type (1000 stays an integer, not
+# "1000") with no extra plugin/config needed. See docs/usage.md#running-the-pipeline
+# and https://nf-co.re/blog/2026/parameter-types for the full explanation.
+#
+# -profile is NOT a parameter and can't be set here -- it stays a CLI flag
+# (see the run command above).
+
+# --- Required ---
+input: './samplesheet.csv'
+outdir: './results'
+interproscan_db: '/path/to/interproscan-5.78-109.0'
+
+# --- Commonly set for a real, full-scale proteome run ---
+# Fixed chunk count for FASTA_QC's splitting step -- DeepCoil2, InterProScan,
+# DeepLoc2, SignalP6 and DeepTMHMM each fan out over the result. Leave unset
+# to fall back to --fasta_qc_chunk_size (sequences per chunk) instead.
+num_blocks: 1000
+
+# 'auto' (default) probes for a usable NVIDIA GPU; set true/false to force it.
+use_gpu: 'auto'
+
+# Only needed if your license-gated software (DeepTMHMM/SignalP6/DeepLoc2
+# weights) doesn't live at the default './softwares' relative to the pipeline.
+# softwares_dir: '/path/to/softwares'

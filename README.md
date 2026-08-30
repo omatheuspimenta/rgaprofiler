@@ -119,6 +119,11 @@ For a large proteome, add `--num_blocks <N>` (e.g. `--num_blocks 1000`) to split
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
 
+> [!TIP]
+> A `-params-file` (YAML/JSON) is the more robust option of the two, especially for
+> typed parameters like `--num_blocks`/`--use_gpu` — see [`docs/usage.md`](docs/usage.md#running-the-pipeline)
+> and the filled-in example at [`assets/params.example.yml`](assets/params.example.yml).
+
 ## Credits
 
 omatheuspimenta/rgaprofiler was originally written by Pimenta-Zanon, M. H..
