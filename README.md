@@ -119,7 +119,7 @@ nextflow run . \
    --outdir <OUTDIR>
 ```
 
-If your institution provides its own [nf-core/configs](https://github.com/nf-core/configs) profile, you can add it alongside, e.g. `-profile docker,<institute>`. See [`docs/usage.md`](docs/usage.md) for the full list of parameters, profiles (including `long_running` for a full-scale proteome), and GPU options (`--use_gpu`).
+If your institution provides its own [nf-core/configs](https://github.com/nf-core/configs) profile, you can add it alongside, e.g. `-profile docker,<institute>`. See [`docs/usage.md`](docs/usage.md) for the full list of parameters, profiles (including `long_running` for a full-scale proteome), and GPU options (`--use_gpu`, `--gpu_concurrency`; see also [Resource sizing and GPU sharing](docs/usage.md#resource-sizing-and-gpu-sharing)).
 
 For a large proteome, add `--num_blocks <N>` (e.g. `--num_blocks 1000`) to split each sample's input into that many sequence blocks — DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM then each run once per block instead of once on the whole proteome, letting Nextflow schedule more independent tasks in parallel (still bounded by your executor/resource configuration). This matters most for DeepCoil2, which can fail or become impractical on a very large single-task input. See [`docs/output.md`](docs/output.md) for how per-block outputs are merged back together.
 

@@ -47,6 +47,14 @@ Update the snapshots with the following command:
 nf-test test --tag test --profile +docker --verbose --update-snapshots
 ```
 
+If you change resource sizing or GPU handling (`conf/base.config`, `bin/detect_host_resources.sh`,
+`bin/gpu_lock.sh`), also run the mocked-host shell tests, which fake a large/small/GPU-less host and
+need only `bash`, `flock` and `nextflow` (no containers, no GPU):
+
+```bash
+for t in tests/bin/test_*.sh; do bash "$t"; done
+```
+
 When you create a pull request with changes, GitHub Actions will run automatic tests.
 Pull requests are typically reviewed when these tests are passing.
 

@@ -25,7 +25,10 @@ process DEEPLOC2_MERGE {
     """
     mkdir -p results/
 
-    first_csv=\$(ls chunk_*/*_deeploc2.csv | head -n1)
+    # glob array instead of 'ls | head -n1': head closing the pipe early makes ls die
+    # of SIGPIPE (exit 141), which 'pipefail' then turns into a task failure.
+    csv_files=(chunk_*/*_deeploc2.csv)
+    first_csv="\${csv_files[0]}"
     head -n1 "\$first_csv" > results/${prefix}_deeploc2.csv
     for f in chunk_*/*_deeploc2.csv; do
         tail -n +2 "\$f" >> results/${prefix}_deeploc2.csv

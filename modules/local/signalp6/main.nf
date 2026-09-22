@@ -1,6 +1,6 @@
 process SIGNALP6 {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_medium_chunk'
     label 'process_gpu' // SignalP6 supports GPU execution; see params.use_gpu / docs/software-setup.md.
                          // Unlike deeploc2, SignalP6 has no --device flag: whether it uses a GPU is a
                          // property of the *weight files themselves*. workflows/rgaprofiler.nf resolves

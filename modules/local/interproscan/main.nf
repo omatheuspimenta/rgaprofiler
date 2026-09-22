@@ -1,6 +1,6 @@
 process INTERPROSCAN {
     tag "$meta.id"
-    label 'process_high' // InterProScan is resource-intensive, so we label it as 'process_high' to allocate more resources.
+    label 'process_high_chunk' // runs once per FASTA_QC chunk; CPU-heavy (see conf/base.config)
 
     container 'ghcr.io/omatheuspimenta/interproscan:5.78-109.0'
     // container 'quay.io/interproscan_base:local' // local dev build

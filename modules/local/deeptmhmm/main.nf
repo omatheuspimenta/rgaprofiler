@@ -1,6 +1,6 @@
 process DEEPTMHMM {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_medium_chunk'
     label 'process_gpu' // DeepTMHMM auto-detects GPU via torch.cuda.is_available() -- no CLI flag,
                          // see params.use_gpu / docs/software-setup.md.
 

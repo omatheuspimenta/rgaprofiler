@@ -35,19 +35,24 @@ process SIGNALP6_MERGE {
     """
     mkdir -p results/
 
-    first_predictions=\$(ls chunk_*/*_signalp6_predictions.txt | head -n1)
+    # glob arrays instead of 'ls | head -n1': head closing the pipe early makes ls die
+    # of SIGPIPE (exit 141), which 'pipefail' then turns into a task failure.
+    predictions_files=(chunk_*/*_signalp6_predictions.txt)
+    first_predictions="\${predictions_files[0]}"
     head -n2 "\$first_predictions" > results/${prefix}_signalp6_predictions.txt
     for f in chunk_*/*_signalp6_predictions.txt; do
         tail -n +3 "\$f" >> results/${prefix}_signalp6_predictions.txt
     done
 
-    first_gff3=\$(ls chunk_*/*_signalp6.gff3 | head -n1)
+    gff3_files=(chunk_*/*_signalp6.gff3)
+    first_gff3="\${gff3_files[0]}"
     head -n1 "\$first_gff3" > results/${prefix}_signalp6.gff3
     for f in chunk_*/*_signalp6.gff3; do
         tail -n +2 "\$f" >> results/${prefix}_signalp6.gff3
     done
 
-    first_region=\$(ls chunk_*/region_output.gff3 | head -n1)
+    region_files=(chunk_*/region_output.gff3)
+    first_region="\${region_files[0]}"
     head -n1 "\$first_region" > results/region_output.gff3
     for f in chunk_*/region_output.gff3; do
         tail -n +2 "\$f" >> results/region_output.gff3

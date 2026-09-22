@@ -68,6 +68,13 @@
                     "help_text": "GPU-capable processes are labelled `process_gpu`. When GPU usage resolves to true, the container is launched with `--gpus all` (Docker/Podman) or `--nv` (Singularity/Apptainer) and requests an accelerator. Non-GPU-capable tools (Phobius, InterProScan, fasta_qc) ignore this setting entirely. 'auto' detection reflects whatever host runs bin/detect_gpu.sh at process-scheduling time; under cluster executors where that may differ from the actual compute node, set this explicitly instead of relying on 'auto'.",
                     "fa_icon": "fas fa-microchip"
                 },
+                "gpu_concurrency": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Maximum number of GPU tasks allowed to run concurrently on each GPU (local executor). Unset = derive from the GPU's VRAM (1 when that can't be determined); 0 = no GPU lock or throttle.",
+                    "help_text": "DeepCoil2, DeepLoc2, SignalP6 and DeepTMHMM tasks (one per chunk) are mutually excluded on the GPU by a real host-level lock (`bin/gpu_lock.sh`, a `flock` semaphore), independent of the CPU/memory scheduling that other processes such as InterProScan compete for. Unset (the default) sizes the number of concurrent tasks per GPU from the GPU's total VRAM and each tool's measured worst-case footprint -- which is 1 (strict serialization) unless VRAM is known to fit more, or can't be determined. Set an explicit N to allow up to N concurrent GPU tasks per GPU if you know your card can take it, or 0 to disable the lock and the per-process throttle entirely (for grid schedulers such as Slurm that already allocate GPUs to jobs, or with `--use_gpu false`, where neither applies anyway). Only applied on the `local` executor.",
+                    "fa_icon": "fas fa-lock"
+                },
                 "fasta_qc_chunk_size": {
                     "type": "integer",
                     "default": 5000,

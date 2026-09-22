@@ -1,6 +1,6 @@
 process DEEPLOC2 {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_medium_chunk'
     label 'process_gpu' // DeepLoc2 supports GPU execution; see params.use_gpu / docs/software-setup.md
 
     // Set container to use for this process

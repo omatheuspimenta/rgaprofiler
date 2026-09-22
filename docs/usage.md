@@ -219,6 +219,80 @@ finishes for every sample it prints the actual resulting chunk count — look fo
 `Sequence batching:` lines. `--outdir/fasta/<sample>_clean_chunks/` also holds the chunk
 FASTA files themselves if you want to inspect them directly.
 
+## Resource sizing and GPU sharing
+
+Two things decide how many chunk tasks run at once on a machine, and both adapt to the
+host automatically — beyond `--num_blocks` you shouldn't need to hand-tune anything.
+
+### Per-chunk CPU/memory requests
+
+DeepCoil2, DeepLoc2, SignalP6, DeepTMHMM (label `process_medium_chunk`) and InterProScan
+(`process_high_chunk`) run once per chunk, so each task is sized for **one chunk**, not a
+whole proteome (whole-input processes such as `RGA_CLASSIFY` keep the generic
+`process_medium`). At task-submission time `conf/base.config`:
+
+- requests memory as a per-tool floor (dominated by loading the model, not by the chunk)
+  plus a small term proportional to the chunk's FASTA size — so a big chunk (small
+  `--num_blocks`, or an unchunked run) asks for proportionally more — multiplied by the
+  attempt number, so an OOM-killed task is retried with more memory as before;
+- on the `local` executor, reads the machine's real CPUs, RAM (cgroup-aware) and GPUs via
+  `bin/detect_host_resources.sh` and **never requests more than the host has** (a task
+  asking for more than the machine can ever provide would otherwise wait forever);
+- on grid/cloud executors (Slurm, …) doesn't use the launch host's specs at all — it can't
+  know the compute node's — and applies the fixed per-chunk defaults instead.
+
+Because requests are small, Nextflow's own scheduler automatically runs as many chunks
+in parallel as the machine can hold: on a 256-CPU/503GB host that is on the order of
+~35–40 concurrent InterProScan chunks (each asks for ~12GB and 6 CPUs; RAM is the
+limit), versus the 5 that the old 100GB-per-task request allowed. (InterProScan's
+`-cpu` is only an upper bound — measured use was ~3.3 cores per chunk, and `-cpu 6` ran a
+chunk as fast as `-cpu 12`.)
+
+Auto-scaling is a default, not a replacement for explicit control. On shared machines
+and clusters cap what the pipeline may use with Nextflow's native
+[`resourceLimits`](https://www.nextflow.io/docs/latest/reference/process.html#resourcelimits)
+in a custom config (`-c`), which is applied on top of everything above:
+
+```groovy
+process.resourceLimits = [ cpus: 64, memory: 200.GB, time: 48.h ]
+```
+
+If a chunk task is still OOM-killed, raise `--num_blocks` (smaller chunks) first.
+
+### GPU concurrency (`--gpu_concurrency`)
+
+Nextflow's `local` executor has no notion of a GPU, so without help every GPU-capable
+chunk task would hit the same card at once. GPU tasks are instead mutually excluded by a
+real host-level lock (`bin/gpu_lock.sh`, a `flock` semaphore held for the whole task).
+It is independent of CPU/memory scheduling, so InterProScan's many small CPU tasks can
+neither starve the GPU tools nor be starved by them. `maxForks` additionally limits how many
+tasks *per tool* are admitted while waiting on the lock, so `--num_blocks 1000` doesn't
+park hundreds of tasks holding CPU/RAM reservations for nothing.
+
+- **Default (unset):** the number of tasks allowed to share one GPU is derived from the
+  GPU's total VRAM and each tool's measured worst-case footprint — in practice **1 on any card up to 40GB** (including the
+  20GB RTX A4500 this pipeline was developed on), 2 on a 48GB card and 3 on an 80GB card.
+  That is set by the most demanding tool: measured peak VRAM per chunk task is DeepCoil2
+  ~11GB at ~300 sequences growing to ~19GB at ~5000 (it scales with chunk size), DeepTMHMM
+  ~4GB, DeepLoc2 ~3GB and SignalP6 ~2GB. Keep DeepCoil2 chunks at or below the default
+  5000 sequences on a 20GB card, since one larger chunk can exceed the whole card by itself;
+  the defaults (`--num_blocks 1000` on a ~300k-protein proteome is ~300 sequences per chunk)
+  are well inside that. It is 1
+  (strict serialization) whenever VRAM can't be determined.
+- **`--gpu_concurrency N`:** allow exactly `N` concurrent GPU tasks per GPU, if you know
+  your card can take it. On multi-GPU hosts each GPU gets its own `N` slots and each task
+  is pinned to the GPU whose slot it holds (`CUDA_VISIBLE_DEVICES` is honoured if you set it).
+- **`--gpu_concurrency 0`:** no lock and no throttle — for grid schedulers that already
+  allocate GPUs per job (the lock is only ever applied on the `local` executor anyway).
+- **`--use_gpu false`:** the tools run on CPU, there is no shared device, so neither the
+  lock nor the throttle applies and chunk tasks run as concurrently as CPU/RAM allow.
+
+Lock files live in `${TMPDIR:-/tmp}/rgaprofiler-gpu-locks-<uid>` (override with the
+`RGAPROFILER_GPU_LOCK_DIR` environment variable; must be a local filesystem, not NFS). If
+locking is impossible (no `flock`, unwritable directory) the task warns and runs unlocked
+rather than failing. Each task's `.gpu_lock.log` records which slot it took and how long it
+waited — note that this wait is included in the `realtime` column of Nextflow's trace file.
+
 ## Running on another organism, or with different classification parameters
 
 This pipeline is **organism-agnostic**: it takes a protein FASTA in, not a genome or a

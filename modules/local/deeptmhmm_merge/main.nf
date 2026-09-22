@@ -37,7 +37,10 @@ process DEEPTMHMM_MERGE {
     """
     mkdir -p results/embeddings results/probabilities results/summaries
 
-    first_gff3=\$(ls chunk_*/*_deeptmhmm.gff3 | head -n1)
+    # glob array instead of 'ls | head -n1': head closing the pipe early makes ls die
+    # of SIGPIPE (exit 141), which 'pipefail' then turns into a task failure.
+    gff3_files=(chunk_*/*_deeptmhmm.gff3)
+    first_gff3="\${gff3_files[0]}"
     head -n1 "\$first_gff3" > results/${prefix}_deeptmhmm.gff3
     for f in chunk_*/*_deeptmhmm.gff3; do
         tail -n +2 "\$f" >> results/${prefix}_deeptmhmm.gff3
