@@ -119,17 +119,16 @@ nextflow run . \
    --outdir <OUTDIR>
 ```
 
-If your institution provides its own [nf-core/configs](https://github.com/nf-core/configs) profile, you can add it alongside, e.g. `-profile docker,<institute>`. See [`docs/usage.md`](docs/usage.md) for the full list of parameters, profiles (including `long_running` for a full-scale proteome), and GPU options (`--use_gpu`, `--gpu_concurrency`; see also [Resource sizing and GPU sharing](docs/usage.md#resource-sizing-and-gpu-sharing)).
+For a whole proteome, add `-profile docker,long_running` and `--num_blocks auto`: the pipeline then splits each proteome into chunks sized for your machine and runs them in parallel. A GPU is used automatically if there is one; without a GPU everything still runs, on the CPU. The quick guide [Which setup fits you?](docs/usage.md#which-setup-fits-you) covers GPU and CPU-only machines, small protein sets, several proteomes and clusters. If your institution provides an [nf-core/configs](https://github.com/nf-core/configs) profile, add it too, e.g. `-profile docker,<institute>`.
 
-For a large proteome, add `--num_blocks <N>` (e.g. `--num_blocks 1000`) to split each sample's input into that many sequence blocks — DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM then each run once per block instead of once on the whole proteome, letting Nextflow schedule more independent tasks in parallel (still bounded by your executor/resource configuration). This matters most for DeepCoil2, which can fail or become impractical on a very large single-task input. See [`docs/output.md`](docs/output.md) for how per-block outputs are merged back together.
+Results go to `<OUTDIR>/<tool>/<sample>/`. The main result for each sample is `rga/<sample>/rga_predictions.tsv`, and `summary_report/<sample>/report.html` gives a one-page overview — see [`docs/output.md`](docs/output.md).
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
 
 > [!TIP]
-> A `-params-file` (YAML/JSON) is the more robust option of the two, especially for
-> typed parameters like `--num_blocks`/`--use_gpu` — see [`docs/usage.md`](docs/usage.md#running-the-pipeline)
-> and the filled-in example at [`assets/params.example.yml`](assets/params.example.yml).
+> A `-params-file` (YAML/JSON) is the easiest way to keep and share the exact settings of a
+> run — start from the filled-in example at [`assets/params.example.yml`](assets/params.example.yml).
 
 ## Credits
 

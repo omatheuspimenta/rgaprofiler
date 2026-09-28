@@ -149,6 +149,10 @@ nextflow_process {
             assert html_text.contains('CNL')
             assert html_text.contains('InterProScan')
             assert html_text.contains('seqkit')
+            // Links point from summary_report/<sample>/ into each tool's own <sample>/ folder
+            // (conf/modules.config's per-sample publish layout).
+            assert html_text =~ /href="\.\.\/\.\.\/rga\/[^\/"]+\/rga_predictions\.tsv"/
+            assert html_text =~ /href="\.\.\/\.\.\/deepcoil2\/[^\/"]+\/"/
 
             assert snapshot(process.out.versions).match()
         }

@@ -24,6 +24,13 @@ process DEEPCOIL2_MERGE {
     script:
     """
     mkdir -p results/
-    cp chunk_*/*.out results/
+
+    # Never 'cp chunk_*/*.out results/': with one .out per protein, a proteome-scale
+    # sample expands that glob into hundreds of thousands of arguments to a single
+    # external command, past the kernel's ARG_MAX ("Argument list too long", exit 126).
+    # A glob into a bash array and the builtin printf never exec, so neither has that
+    # limit; xargs then splits the list into as many cp calls as fit.
+    out_files=(chunk_*/*.out)
+    printf '%s\\0' "\${out_files[@]}" | xargs -0 cp -t results/ --
     """
 }

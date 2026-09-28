@@ -15,7 +15,7 @@ Work through these in order, from the pipeline's root directory (`cd rgaprofiler
 
 1. [ ] **InterProScan** — run `./setup_interproscandb.sh` (downloads + unpacks automatically). → [jump to section](#interproscan)
 2. [ ] **DeepTMHMM** — request the Academic License release, place 8 files under `softwares/DeepTMHMM/DeepTMHMM-Academic-License-v1.0/`. → [jump to section](#deeptmhmm)
-3. [ ] **SignalP 6.0** — download from DTU, place weights under `softwares/SignalP6/signalp-6-package/models/`. → [jump to section](#signalp-60)
+3. [ ] **SignalP 6.0** — download from DTU, place weights under `softwares/SignalP6/signalp-6-package/models/`; **on a machine with a GPU only**, also make the one-time GPU copy of the weights (step 3 of that section). → [jump to section](#signalp-60)
 4. [ ] **DeepLoc 2** — download from DTU, place weights under `softwares/DeepLoc2/DeepLoc2/models/` and the ESM1b encoder under `softwares/DeepLoc2/torch_cache/`. → [jump to section](#deeploc-2)
 5. [ ] **Verify everything** with `bin/check_software_present.sh` (one command per tool — see [below](#how-the-check-works)).
 
@@ -79,13 +79,13 @@ softwares/DeepTMHMM/DeepTMHMM-Academic-License-v1.0/
 - `deeptmhmm_cv_0.model` … `deeptmhmm_cv_4.model` (5 cross-validation checkpoints)
 - `esm_model_alphabet.pt`, `esm_model_args.pt`, `esm_model_state_dict.pt` (bundled ESM1b weights)
 
-**Note on the CUDA stack**: upstream's own installation instructions pin `torch==1.5.0+cu92` (2020-era, CUDA 9.2), which does not run on modern GPUs (`RuntimeError: cublas runtime error` on Ampere/Ada cards). `docker/deeptmhmm/Dockerfile` uses a modern replacement stack (Python 3.10, a current PyTorch build) instead — validated end-to-end on this host's real GPU — with the small number of `torch.load()` calls on DeepTMHMM's inference path patched for PyTorch 2.6+'s `weights_only` default change. This is a packaging fix only; it doesn't change model behavior or outputs.
+**Note on the CUDA stack**: upstream's own installation instructions pin `torch==1.5.0+cu92` (2020-era, CUDA 9.2), which does not run on modern GPUs (`RuntimeError: cublas runtime error` on Ampere/Ada cards). `docker/deeptmhmm/Dockerfile` uses a modern replacement stack (Python 3.10, a current PyTorch build) instead — validated end-to-end on a real GPU — with the small number of `torch.load()` calls on DeepTMHMM's inference path patched for PyTorch 2.6+'s `weights_only` default change. This is a packaging fix only; it doesn't change model behavior or outputs.
 
 ### SignalP 6.0
 
 **License**: DTU Health Tech academic-use license; model weights are distributed separately from the pipeline.
 
-SignalP 6.0 ships three alternative run modes (`fast`, `slow`, `slow-sequential`), each needing its own separately-downloaded weight file(s) — "your download only included the one you picked" (DTU's own words). This pipeline defaults to **`slow-sequential`**, since that's the mode whose weights (`sequential_models_signalp6/`) are actually present in this repo's own reference install; it takes ~6x longer than `fast` but needs no more RAM.
+SignalP 6.0 ships three alternative run modes (`fast`, `slow`, `slow-sequential`), each needing its own separately-downloaded weight file(s) — "your download only included the one you picked" (DTU's own words). This pipeline uses **`slow-sequential`** (weights folder `sequential_models_signalp6/`), the mode it was validated with; it is ~6x slower than `fast` but needs no more memory.
 
 **Step 1 — download.** Go to https://services.healthtech.dtu.dk/services/SignalP-6.0/, accept DTU's academic license/terms on that page, and download the Linux package. DTU distributes each run mode's weights as separate downloads/variants of the package — make sure whichever one you get includes the **`slow-sequential`** weights, since that's the mode this pipeline uses by default (if in doubt, re-check the download page for a `slow_sequential`/`slow-sequential` labelled option, or contact DTU support if only `fast` is offered). You'll get a `signalp-6*.tar.gz`-style archive that unpacks to a `signalp-6-package/` folder containing (among other things) a `models/` subdirectory.
 
@@ -106,7 +106,14 @@ i.e. the whole `signalp-6-package/` folder you downloaded should live under `sof
 - `distilled_model_signalp6.pt` (`fast` mode)
 - `ensemble_model_signalp6.pt` (`slow` mode)
 
-**GPU note**: unlike DeepLoc2, SignalP6 has no `--device`/`-d` runtime flag — whether it uses a GPU is a property of the weight _files themselves_. The pipeline handles this automatically: whenever GPU is requested/detected (`--use_gpu auto`, the default, or `--use_gpu true`), `workflows/rgaprofiler.nf` looks for a **separate**, GPU-converted copy of the weights at `softwares_dir/SignalP6/signalp-6-package/models_gpu/` and points SignalP6 at that directory instead of the normal CPU one — you just need to have produced that directory once, ahead of time (SignalP6 has no way to convert its own weights at run time, and doing so on every run would be needlessly slow anyway). One-time setup, run from the signalp6 image so `signalp6_convert_models` and its Python dependencies are available (needs the same real GPU + NVIDIA Container Toolkit as running the pipeline itself — this actually rewrites tensors onto a CUDA device, it isn't a pure format conversion):
+**Step 3 — only on a machine with an NVIDIA GPU: make a GPU copy of the weights.** Skip
+this step if your machine has no GPU (or you'll always run with `--use_gpu false`).
+
+Unlike the other tools, SignalP6 can't switch between CPU and GPU by itself — the weight
+files themselves are either CPU or GPU weights. So when a GPU is used, the pipeline looks
+for a GPU-converted copy in `softwares/SignalP6/signalp-6-package/models_gpu/`. Create it
+once, from the pipeline root (this needs the GPU and the NVIDIA Container Toolkit, like a
+GPU run itself):
 
 ```bash
 docker run --rm --gpus all -u $(id -u):$(id -g) -v "$(pwd)/softwares/SignalP6":/data ghcr.io/omatheuspimenta/signalp6:6.0h bash -c '
@@ -115,7 +122,10 @@ docker run --rm --gpus all -u $(id -u):$(id -g) -v "$(pwd)/softwares/SignalP6":/
 '
 ```
 
-This copies the CPU weights first, so the original `models/` directory is left untouched — `--use_gpu false` still works afterwards, unaffected. `-u $(id -u):$(id -g)` matters: the container needs to write into your bind-mounted `softwares/`, which it can't do running as its own internal user. If `models_gpu/` doesn't exist yet and GPU is requested, the pipeline's pre-flight check (`bin/check_software_present.sh`) fails fast with this exact command rather than letting SignalP6 itself fail deep inside a container. Pass `--use_gpu false` to skip all of this and run on CPU (slower, but needs no extra setup).
+This copies the CPU weights and converts the copy, so the original `models/` stays as it
+is and CPU runs keep working. (`-u $(id -u):$(id -g)` lets the container write into your
+`softwares/` folder.) If you forget this step on a GPU machine, the pipeline stops before
+starting and prints this same command.
 
 ### DeepLoc 2
 

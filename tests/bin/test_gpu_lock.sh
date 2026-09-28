@@ -13,10 +13,10 @@ cat > "$TMP/holder.sh" <<'H'
 #!/bin/bash
 set -e
 cd "$(mktemp -d)"
-source "$REPO/bin/gpu_lock.sh" "$SLOTS"
-echo "$(date +%s.%N) start ${CUDA_VISIBLE_DEVICES:-none}" >> "$EVENTS"
+source "$REPO/bin/gpu_lock.sh" "$SLOTS" ${NEED:-}
+echo "$(date +%s.%N) start ${CUDA_VISIBLE_DEVICES:-none} ${NEED:-}" >> "$EVENTS"
 sleep 1
-echo "$(date +%s.%N) end" >> "$EVENTS"
+echo "$(date +%s.%N) end ${NEED:-}" >> "$EVENTS"
 H
 peak() { sort -n "$1" | awk '/start/{c++; if(c>m)m=c} /end/{c--} END{print m+0}'; }
 run_holders() { # n slots [extra env...]
@@ -60,6 +60,42 @@ check "slots=0: no locking" 4 "$(peak "$TMP/ev")"
 : > "$TMP/ev"
 ( cd "$TMP" && env REPO="$REPO" SLOTS=1 EVENTS="$TMP/ev" RGAPROFILER_GPU_LOCK_DIR=/proc/nonexistent/locks PATH="$TMP/bin" bash "$TMP/holder.sh" ) 2>/dev/null
 check "unwritable lock dir: task still runs (fail-open)" 1 "$(grep -c start "$TMP/ev")"
+
+# --- VRAM-weighted mode ('auto' + a per-task VRAM need). The fake card has 20470 MiB ->
+# 20470*85%/512 = 33 units; 4600 MiB = 9 units, 2200 MiB = 5, 'all' = 33.
+# peak_units: max over time of the summed units of concurrently running holders.
+peak_units() { sort -n "$1" | awk '
+    function u(n) { return n == "all" ? 33 : int((n + 511) / 512) }
+    /start/ { c += u($4); if (c > m) m = c } /end/ { c -= u($3) } END { print m + 0 }'; }
+run_mixed() { # run_mixed need... : one holder per need, all started at once
+    : > "$TMP/ev"
+    for need in "$@"; do env REPO="$REPO" SLOTS=auto NEED="$need" EVENTS="$TMP/ev" RGAPROFILER_GPU_LOCK_DIR="$TMP/locks_w" PATH="$TMP/bin" bash "$TMP/holder.sh" & done
+    wait
+}
+
+run_mixed 4600 4600 4600 4600 4600 4600
+check "weighted: 4600MiB tasks -> 3 fit on the card at once" 3 "$(peak "$TMP/ev")"
+check "weighted: all 6 ran" 6 "$(grep -c start "$TMP/ev")"
+
+run_mixed all all all
+check "weighted: 'all' is exclusive" 1 "$(peak "$TMP/ev")"
+
+run_mixed all 4600 2200 all 4600 2200 2200 4600 all 2200
+check "weighted mix: summed units never exceed the card's 33" 1 "$(( $(peak_units "$TMP/ev") <= 33 ))"
+check "weighted mix: light tools really share the card" 1 "$(( $(peak "$TMP/ev") > 1 ))"
+check "weighted mix: no deadlock, all 10 ran" 10 "$(grep -c start "$TMP/ev")"
+
+# an explicit per-GPU count still means N tasks of any size (need is ignored)
+: > "$TMP/ev"
+for _ in 1 2 3 4; do env REPO="$REPO" SLOTS=2 NEED=all EVENTS="$TMP/ev" RGAPROFILER_GPU_LOCK_DIR="$TMP/locks_n" PATH="$TMP/bin" bash "$TMP/holder.sh" & done; wait
+check "explicit --gpu_concurrency 2 ignores VRAM need" 2 "$(peak "$TMP/ev")"
+
+# unreadable VRAM (nvidia-smi prints garbage) -> weighted request falls back to 1 per GPU
+mkdir -p "$TMP/bin_novram"; cp -a "$TMP/bin/." "$TMP/bin_novram/"
+printf '#!/bin/sh\necho "ERR!"\n' > "$TMP/bin_novram/nvidia-smi"; chmod +x "$TMP/bin_novram/nvidia-smi"
+: > "$TMP/ev"
+for _ in 1 2 3; do env REPO="$REPO" SLOTS=auto NEED=2200 EVENTS="$TMP/ev" RGAPROFILER_GPU_LOCK_DIR="$TMP/locks_nv" PATH="$TMP/bin_novram" bash "$TMP/holder.sh" & done; wait
+check "unknown VRAM: weighted request is serialized" 1 "$(peak "$TMP/ev")"
 
 if (( fails )); then echo "$fails failure(s)"; exit 1; fi
 echo "all gpu-lock tests passed"

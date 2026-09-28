@@ -30,8 +30,69 @@ process CHUNK_HIGH {
     """
 }
 
+
+// Named like the real module so conf/base.config's per-tool withName block applies too.
+process SIGNALP6 {
+    label 'process_medium_chunk'
+    label 'process_gpu'
+    input:
+    path fasta
+    output:
+    stdout
+    script:
+    """
+    echo "TOOL SIGNALP6 cpus=${task.cpus} mem_gb=${task.memory.toGiga()} time_h=${task.time.toHours()} vram_mb=${task.ext.gpu_vram_mb} longest=${task.ext.chunk.longest}"
+    """
+}
+
+// Named like the real module so conf/base.config's per-tool withName block applies too.
+process DEEPLOC2 {
+    label 'process_medium_chunk'
+    label 'process_gpu'
+    input:
+    path fasta
+    output:
+    stdout
+    script:
+    """
+    echo "TOOL DEEPLOC2 cpus=${task.cpus} mem_gb=${task.memory.toGiga()} time_h=${task.time.toHours()} vram_mb=${task.ext.gpu_vram_mb} longest=${task.ext.chunk.longest}"
+    """
+}
+
+// Named like the real module so conf/base.config's per-tool withName block applies too.
+process DEEPTMHMM {
+    label 'process_medium_chunk'
+    label 'process_gpu'
+    input:
+    path fasta
+    output:
+    stdout
+    script:
+    """
+    echo "TOOL DEEPTMHMM cpus=${task.cpus} mem_gb=${task.memory.toGiga()} time_h=${task.time.toHours()} vram_mb=${task.ext.gpu_vram_mb} longest=${task.ext.chunk.longest}"
+    """
+}
+
+// Named like the real module so conf/base.config's per-tool withName block applies too.
+process DEEPCOIL2 {
+    label 'process_medium_chunk'
+    label 'process_gpu'
+    input:
+    path fasta
+    output:
+    stdout
+    script:
+    """
+    echo "TOOL DEEPCOIL2 cpus=${task.cpus} mem_gb=${task.memory.toGiga()} time_h=${task.time.toHours()} vram_mb=${task.ext.gpu_vram_mb} longest=${task.ext.chunk.longest}"
+    """
+}
+
 workflow {
     ch = Channel.fromPath(params.chunk)
     CHUNK_MEDIUM(ch).view()
     CHUNK_HIGH(ch).view()
+    SIGNALP6(ch).view()
+    DEEPLOC2(ch).view()
+    DEEPTMHMM(ch).view()
+    DEEPCOIL2(ch).view()
 }

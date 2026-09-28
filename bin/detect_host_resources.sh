@@ -17,9 +17,15 @@ set -euo pipefail
 #   gpu_slots_per_gpu=<int>  how many GPU tasks may safely share ONE GPU at once (>= 1),
 #                            derived from gpu_vram_mb -- see GPU_TOOL_PEAK_VRAM_MB below
 #
-# `--gpu-slots [N|auto]`: print only the total number of concurrent GPU-task slots
-# (per-GPU slots x visible GPUs, never below 1). N is an explicit per-GPU value
-# (--gpu_concurrency); 'auto' (the default) uses gpu_slots_per_gpu above.
+# `--gpu-slots [N|auto] [vram_mb|all]`: print only the total number of concurrent GPU-task
+# slots (per-GPU slots x visible GPUs, never below 1). N is an explicit per-GPU value
+# (--gpu_concurrency); 'auto' (the default) uses gpu_slots_per_gpu above -- or, when a
+# task's peak VRAM need is also given, how many such tasks fit on each GPU by VRAM
+# units (below); 'all' means the task needs a whole GPU.
+#
+# `--gpu-units [vram_mb|all]`: the VRAM-weighted lock's unit count (bin/gpu_lock.sh).
+# Without an argument, how many GPU_LOCK_UNIT_MB units one GPU's usable VRAM holds; with
+# one, how many units a task needing that much VRAM takes ('all' = every unit).
 #
 # Anything that can't be determined confidently falls back to the SAFE side: unknown
 # VRAM/footprint means 1 slot per GPU (strict serialization), never more.
@@ -52,6 +58,8 @@ GPU_TOOL_PEAK_VRAM_MB="${RGAPROFILER_GPU_TOOL_PEAK_VRAM_MB:-19200}"
 # Fraction of a GPU's VRAM that concurrent tasks may plan to use (leaves headroom for
 # the CUDA context/fragmentation and other users of the card).
 GPU_VRAM_USABLE_FRACTION_PCT=85
+# Granularity of the VRAM-weighted GPU lock (bin/gpu_lock.sh): one lock file per unit.
+GPU_LOCK_UNIT_MB=512
 
 # --- CPUs ---------------------------------------------------------------------------
 cpus="${RGAPROFILER_NPROC:-$(nproc 2>/dev/null || echo 1)}"
@@ -104,9 +112,37 @@ if [[ "$GPU_TOOL_PEAK_VRAM_MB" =~ ^[0-9]+$ ]] && (( GPU_TOOL_PEAK_VRAM_MB > 0 &&
     (( slots_per_gpu < 1 )) && slots_per_gpu=1
 fi
 
+# VRAM-weighted units: usable VRAM per GPU split into GPU_LOCK_UNIT_MB units (1 if unknown).
+units_per_gpu=1
+if (( gpu_vram_mb > 0 )); then
+    units_per_gpu=$(( gpu_vram_mb * GPU_VRAM_USABLE_FRACTION_PCT / 100 / GPU_LOCK_UNIT_MB ))
+    (( units_per_gpu < 1 )) && units_per_gpu=1
+fi
+units_for() { # units_for <vram_mb|all> -> units one such task holds (1..units_per_gpu)
+    local need="$1" u
+    if [[ "$need" =~ ^[0-9]+$ && "$need" -ge 1 ]]; then
+        u=$(( (need + GPU_LOCK_UNIT_MB - 1) / GPU_LOCK_UNIT_MB ))
+        (( u > units_per_gpu )) && u=$units_per_gpu
+    else
+        u=$units_per_gpu   # 'all', or anything unparseable: the safe side, a whole GPU
+    fi
+    echo "$u"
+}
+
+if [[ "${1:-}" == "--gpu-units" ]]; then
+    if [[ -n "${2:-}" ]]; then units_for "$2"; else echo "$units_per_gpu"; fi
+    exit 0
+fi
+
 if [[ "${1:-}" == "--gpu-slots" ]]; then
     want="${2:-auto}"
-    if [[ "$want" =~ ^[0-9]+$ && "$want" -ge 1 ]]; then per_gpu=$want; else per_gpu=$slots_per_gpu; fi
+    if [[ "$want" =~ ^[0-9]+$ && "$want" -ge 1 ]]; then
+        per_gpu=$want
+    elif [[ -n "${3:-}" ]] && (( gpu_vram_mb > 0 )); then
+        per_gpu=$(( units_per_gpu / $(units_for "$3") ))
+    else
+        per_gpu=$slots_per_gpu
+    fi
     n_gpus=$gpus
     (( n_gpus < 1 )) && n_gpus=1
     echo $(( per_gpu * n_gpus ))

@@ -3,9 +3,11 @@ set -euo pipefail
 
 if [ "$#" -ne 4 ]; then
     echo "Usage: $0 <input.fasta> <output.fasta> <split_mode> <split_value>" >&2
-    echo "  split_mode:  'size' (split into chunks of split_value sequences each) or" >&2
-    echo "               'parts' (split into exactly split_value chunks, balanced by seqkit)" >&2
-    echo "  split_value: positive integer -- sequences-per-chunk for 'size', chunk count for 'parts'" >&2
+    echo "  split_mode:  'size' (split into chunks of split_value sequences each)," >&2
+    echo "               'parts' (split into exactly split_value chunks, balanced by seqkit) or" >&2
+    echo "               'auto' (choose the chunk count from the sequence count and the host's CPUs)" >&2
+    echo "  split_value: positive integer -- sequences-per-chunk for 'size', chunk count for 'parts'," >&2
+    echo "               the host's CPU count for 'auto'" >&2
     exit 1
 fi
 
@@ -16,8 +18,8 @@ SPLIT_VALUE=$4
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-if [ "$SPLIT_MODE" != "size" ] && [ "$SPLIT_MODE" != "parts" ]; then
-    echo "ERROR: split_mode must be 'size' or 'parts', got '$SPLIT_MODE'" >&2
+if [ "$SPLIT_MODE" != "size" ] && [ "$SPLIT_MODE" != "parts" ] && [ "$SPLIT_MODE" != "auto" ]; then
+    echo "ERROR: split_mode must be 'size', 'parts' or 'auto', got '$SPLIT_MODE'" >&2
     exit 1
 fi
 
@@ -91,6 +93,27 @@ OUTBASE=$(basename "$OUTPUT")
 OUTDIR=$(dirname "$OUTPUT")
 CHUNK_PREFIX="${OUTBASE%.*}"
 CHUNK_DIR="$OUTDIR/${CHUNK_PREFIX}_chunks"
+
+# 'auto' (--num_blocks auto): pick the chunk count here, now that the cleaned sequence
+# count is known, then split exactly as an explicit --num_blocks of that count would.
+# Chunk size = enough chunks for ~2 waves of InterProScan tasks (4 CPUs each, the
+# longest per-chunk step) across the host's CPUs, so no core idles through the tail, but
+# never below AUTO_MIN_SEQS sequences per chunk -- every chunk task pays a fixed model
+# load (~15-25s per GPU tool, far more on CPU) -- nor above AUTO_MAX_SEQS, which keeps
+# DeepCoil2's GPU memory (grows with chunk size) and each task's runtime bounded.
+AUTO_MIN_SEQS=100
+AUTO_MAX_SEQS=500
+if [ "$SPLIT_MODE" = "auto" ]; then
+    N_SEQS=$(grep -c '^>' "$OUTPUT")
+    SLOTS=$(( SPLIT_VALUE / 4 )); (( SLOTS < 1 )) && SLOTS=1
+    SIZE=$(( (N_SEQS + 2 * SLOTS - 1) / (2 * SLOTS) ))
+    (( SIZE < AUTO_MIN_SEQS )) && SIZE=$AUTO_MIN_SEQS
+    (( SIZE > AUTO_MAX_SEQS )) && SIZE=$AUTO_MAX_SEQS
+    PARTS=$(( (N_SEQS + SIZE - 1) / SIZE ))
+    echo "num_blocks auto: ${N_SEQS} sequences, ${SPLIT_VALUE} CPUs -> ${PARTS} chunk(s) of ~$(( (N_SEQS + PARTS - 1) / PARTS )) sequences (rerun with --num_blocks ${PARTS} to reproduce exactly)" >&2
+    SPLIT_MODE=parts
+    SPLIT_VALUE=$PARTS
+fi
 
 rm -rf "$CHUNK_DIR"
 if [ "$SPLIT_MODE" = "size" ]; then

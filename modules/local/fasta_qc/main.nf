@@ -10,7 +10,7 @@ process FASTA_QC {
 
     input:
     tuple val(meta), path(fasta)
-    val split_mode  // 'size' (split_value = sequences/chunk) or 'parts' (split_value = chunk count)
+    val split_mode  // 'size' (split_value = sequences/chunk), 'parts' (split_value = chunk count) or 'auto' (split_value = host CPUs)
     val split_value
 
     output:

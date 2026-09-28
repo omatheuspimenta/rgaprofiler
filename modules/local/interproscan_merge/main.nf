@@ -21,6 +21,11 @@ process INTERPROSCAN_MERGE {
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    cat ${tsvs} > ${prefix}_interpro.tsv
+    # Not 'cat \${tsvs}': Nextflow expands that into one argument per chunk on a single
+    # cat call, which passes the kernel's ARG_MAX ("Argument list too long", exit 126)
+    # once there are enough chunks. A glob into a bash array and the builtin printf
+    # never exec; xargs splits the list into as many cat calls as fit, in order.
+    tsv_files=(chunk_*/*)
+    printf '%s\\0' "\${tsv_files[@]}" | xargs -0 cat -- > ${prefix}_interpro.tsv
     """
 }

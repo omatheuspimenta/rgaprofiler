@@ -2,147 +2,226 @@
 
 ## Introduction
 
-This document describes the output produced by the pipeline. The directories listed below are created in the results directory (`--outdir`) after the pipeline has finished. All paths are relative to the top-level results directory.
+This page describes what the pipeline writes to your results directory (`--outdir`) and
+how to read it. All paths below are relative to that directory.
 
-Every prediction-tool directory is named after the process's first underscore-token (e.g. `RGA_CLASSIFY` publishes to `rga/`, `RGA_REPORT` to `summary_report/`) — a pre-existing, shared `publishDir` convention (`conf/modules.config`), not something specific to any one tool.
+**Start here:** the main result for each sample is
+`rga/<sample>/rga_predictions.tsv` (one row per protein, with its RGA call), and the
+quickest overview is `summary_report/<sample>/report.html` (open it in a browser).
+
+## How the results are organised
+
+Every tool has its own folder, and inside it **one folder per sample** (the `sample`
+column of your samplesheet), so the samples of a multi-sample run never overwrite each
+other:
+
+```
+<outdir>/
+├── fasta/<sample>/             cleaned input FASTA (+ the chunks it was split into)
+├── deepcoil2/<sample>/         coiled-coil predictions
+├── phobius/<sample>/           signal peptides + transmembrane topology
+├── interproscan/<sample>/      protein domains
+├── deeploc2/<sample>/          subcellular localisation
+├── signalp6/<sample>/          signal peptides
+├── deeptmhmm/<sample>/         transmembrane topology
+├── rga/<sample>/               ★ RGA classification — the main result
+├── summary_report/<sample>/    ★ one-page HTML summary
+└── pipeline_info/              run reports, parameters and software versions
+```
 
 ## Pipeline overview
 
-The pipeline takes a protein FASTA per sample and:
+For each sample, the pipeline:
 
-1. Cleans/deduplicates it and splits it into sequence blocks/chunks ([FASTA_QC](#fasta_qc)).
-2. Runs six independent protein-prediction tools against the cleaned FASTA: [DeepCoil2](#deepcoil2) (coiled-coil domains), [Phobius](#phobius) (signal peptides + TM topology), [InterProScan](#interproscan) (protein domains/functional annotation), [DeepLoc2](#deeploc2) (subcellular localization), [SignalP6](#signalp6) (signal peptides), [DeepTMHMM](#deeptmhmm) (transmembrane helices). Five of these six — every one except Phobius — run once per FASTA_QC chunk rather than once on the whole proteome, then have their own `*_MERGE` step reassemble the per-chunk outputs into one result per sample (see [FASTA_QC](#fasta_qc) below).
-3. Combines all six tools' outputs into per-protein RGA (Resistance Gene Analog) classifications ([RGA classification](#rga-classification)), using the classification logic from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor).
-4. Renders a self-contained HTML summary of those classifications ([Summary report](#summary-report)).
+1. Cleans the protein FASTA and splits it into chunks ([FASTA_QC](#fasta_qc)).
+2. Runs six prediction tools on every chunk and merges each tool's per-chunk results back
+   into one result per sample: [DeepCoil2](#deepcoil2) (coiled coils),
+   [Phobius](#phobius) (signal peptides + transmembrane topology),
+   [InterProScan](#interproscan) (protein domains), [DeepLoc2](#deeploc2) (subcellular
+   localisation), [SignalP6](#signalp6) (signal peptides) and [DeepTMHMM](#deeptmhmm)
+   (transmembrane topology).
+3. Combines all six into a per-protein RGA (Resistance Gene Analog) call
+   ([RGA classification](#rga-classification)), using the classification logic of
+   [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor).
+4. Summarises the calls in a one-page HTML report ([Summary report](#summary-report)).
 
 ```
-                              ┌─ DeepCoil2 ────▶ DeepCoil2_MERGE ─────┐
-                              ├─ Phobius ─────────────────────────────┤
-input.fasta ──▶ FASTA_QC ──▶ ├─ InterProScan ─▶ InterProScan_MERGE ──┼──▶ RGA_CLASSIFY ──▶ RGA_REPORT
-                              ├─ DeepLoc2 ─────▶ DeepLoc2_MERGE ──────┤
-                              ├─ SignalP6 ─────▶ SignalP6_MERGE ──────┤
-                              └─ DeepTMHMM ────▶ DeepTMHMM_MERGE ─────┘
+                              ┌─ DeepCoil2 ─────┐
+                              ├─ Phobius ───────┤
+input.fasta ──▶ FASTA_QC ──▶  ├─ InterProScan ──┼──▶ RGA classification ──▶ Summary report
+  (per sample)  (clean, chunk)├─ DeepLoc2 ──────┤
+                              ├─ SignalP6 ──────┤
+                              └─ DeepTMHMM ─────┘
+                               (each: one task per chunk, then merged per sample)
 ```
+
+Chunking is invisible in the results: every protein is predicted exactly once and each
+tool's files contain every protein of the sample. (Which proteins share a chunk can nudge
+a few tools' numbers very slightly — see
+[Chunking and reproducibility](usage.md#chunking-and-reproducibility).)
 
 ### FASTA_QC
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `fasta/`
-  - `<sample>_clean.fasta`: the input FASTA after deduplication, stripping the trailing stop codon (`*`) some proteomes ship, and uppercasing — this cleaned file is what every downstream tool actually receives (directly, for Phobius; split into chunks, for the other five tools below).
-  - `<sample>_clean_chunks/<sample>_clean.part_NNN.fasta.fasta`: the same cleaned sequences split into chunks — complete FASTA records only, never an arbitrary line split. DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each run once per chunk (their own `*_MERGE` process then reassembles the per-chunk results into one file/directory per sample, published under each tool's own output directory below — chunking is otherwise invisible downstream).
-
-  Chunk count/size is controlled by one of two mutually exclusive parameters:
-  - `--num_blocks <N>` (e.g. `--num_blocks 1000`): split into (up to) `N` chunks, balanced as evenly as possible by sequence count. Not hard-coded — set as high as needed for a very large proteome (this is what keeps DeepCoil2 in particular from ever having to process an entire proteome as a single task). A higher value gives Nextflow's executor more independent, smaller tasks to schedule in parallel; it does not itself force that many tasks to run concurrently — that remains governed by your `-profile`/executor/resource configuration.
-  - `--fasta_qc_chunk_size <N>` (default `5000`, used only when `--num_blocks` is unset): a fixed number of sequences per chunk instead, so the chunk *count* scales with input size.
+- `fasta/<sample>/`
+  - `<sample>_clean.fasta`: your input after removing duplicate protein IDs, trailing
+    stop codons (`*`) and stray characters, and uppercasing. This is what every tool
+    actually analyses.
+  - `<sample>_clean_chunks/<sample>_clean.part_NNN.fasta.fasta`: the same sequences split
+    into chunks (whole FASTA records only). How many chunks is set by `--num_blocks` or
+    `--fasta_qc_chunk_size` — see [Sequence batching](usage.md#sequence-batching---num_blocks).
 
 </details>
+
+Every sequence that was changed or dropped is listed as a `WARNING` in the FASTA_QC task's log (`.command.err` in its work directory).
 
 ### DeepCoil2
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `deepcoil2/results/`
-  - One `<protein_id>.out` per input sequence: a per-residue TSV (`aa`, `cc`, `raw_cc`, `prob_a`, `prob_d`) giving the predicted coiled-coil probability and heptad-register (`a`/`d` core position) probabilities at every residue.
+- `deepcoil2/<sample>/`
+  - One `<protein_id>.out` per protein (the ID with punctuation removed): a per-residue
+    table with columns `aa`, `cc`, `raw_cc`, `prob_a`, `prob_d` — the coiled-coil
+    probability and the heptad-position (`a`/`d`) probabilities at every residue.
+    Proteins shorter than 20 residues are skipped by DeepCoil2 and have no file.
 
 </details>
 
-[DeepCoil2](https://github.com/labstructbioinf/DeepCoil) predicts coiled-coil domains. GPU-capable (`--use_gpu`, see [usage docs](../README.md#usage)). Runs once per FASTA_QC chunk (`--num_blocks`/`--fasta_qc_chunk_size`, see [FASTA_QC](#fasta_qc)) — every input sequence appears in exactly one chunk's `.out` file, so `DeepCoil2_MERGE` just collects them into the single `results/` directory published here.
+[DeepCoil2](https://github.com/labstructbioinf/DeepCoil) predicts coiled-coil domains.
+Runs on GPU when available.
 
 ### Phobius
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `phobius/<sample>_phobius.tsv`: short-format Phobius output — one row per protein with predicted transmembrane helix count and signal-peptide call.
+- `phobius/<sample>/<sample>_phobius.tsv`: Phobius short format — one row per protein, in
+  the order of your input, with the number of transmembrane helices (`TM`), whether a
+  signal peptide was found (`SP`) and the predicted topology string.
 
 </details>
 
-[Phobius](https://software.sbc.su.se/cgi-bin/request.cgi?project=phobius) predicts signal peptides and transmembrane topology jointly. CPU-only.
+[Phobius](https://software.sbc.su.se/cgi-bin/request.cgi?project=phobius) predicts signal
+peptides and transmembrane topology together. CPU only.
 
 ### InterProScan
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `interproscan/<sample>_interpro.tsv`: standard 14/15-column InterProScan TSV — one row per domain/site hit per protein, across every member database InterProScan runs (Pfam, PANTHER, Gene3D, PROSITE, HAMAP, CDD, …). This is the primary source of the NB-ARC, LRR, TIR, RPW8, and coiled-coil domain calls the RGA classification step relies on.
+- `interproscan/<sample>/<sample>_interpro.tsv`: the standard InterProScan TSV (no header
+  row) — one row per domain/site hit, from every member database (Pfam, PANTHER, Gene3D,
+  PROSITE, CDD, …). This is where the NB-ARC, LRR, TIR, RPW8 and coiled-coil domain
+  evidence for the RGA calls comes from. Row order is not meaningful (InterProScan itself
+  writes rows in a different order from run to run).
 
 </details>
 
-[InterProScan](https://www.ebi.ac.uk/interpro/about/interproscan/) does protein domain/functional-site annotation. CPU-only. Requires a pre-downloaded database (`--interproscan_db`, see [`docs/software-setup.md`](software-setup.md)); by design this pipeline's committed reference runs did **not** enable the licensed Phobius/SignalP-4.1/TMHMM-2.0c sub-analyses within InterProScan itself — those signals come from this pipeline's own dedicated Phobius/SignalP6/DeepTMHMM modules instead. Like DeepCoil2, runs once per FASTA_QC chunk; `InterProScan_MERGE` concatenates the per-chunk TSVs (no header row) into the single file published here.
+[InterProScan](https://www.ebi.ac.uk/interpro/about/interproscan/) annotates protein
+domains and functional sites. CPU only. Needs its database downloaded once
+(`--interproscan_db`, see [software setup](software-setup.md)). InterProScan's own
+licensed Phobius/SignalP 4.1/TMHMM 2.0c analyses are not needed: those signals come from
+this pipeline's dedicated Phobius, SignalP6 and DeepTMHMM steps.
 
 ### DeepLoc2
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `deeploc2/results/<sample>_deeploc2.csv`: one row per protein — predicted subcellular localization(s), per-class probabilities, predicted sorting signals, and membrane-protein type.
+- `deeploc2/<sample>/<sample>_deeploc2.csv`: one row per protein — predicted subcellular
+  localisation(s), the probability of each compartment, sorting signals and membrane type.
 
 </details>
 
-[DeepLoc2](https://services.healthtech.dtu.dk/services/DeepLoc-2.1/) predicts subcellular localization. GPU-capable (`--use_gpu`); runs the "Fast" model by default. Runs once per FASTA_QC chunk; `DeepLoc2_MERGE` keeps the first chunk's CSV header and concatenates every chunk's data rows into the single file published here.
+[DeepLoc2](https://services.healthtech.dtu.dk/services/DeepLoc-2.1/) predicts subcellular
+localisation (using its "Fast" model). Runs on GPU when available. Localisation never
+decides an RGA class; it only adjusts the reported confidence.
 
 ### SignalP6
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `signalp6/results/`
-  - `<sample>_signalp6_predictions.txt`: per-protein predicted signal-peptide type (Sec/SPI, Sec/SPII, Tat/SPI, …) and cleavage-site position/probability.
-  - `<sample>_signalp6.gff3` / `region_output.gff3`: the same calls in GFF3 form.
-  - `chunk_N_output.json`: full per-residue probability output, one file per FASTA_QC chunk (a per-chunk JSON object, not a per-protein list, so it has no lossless line-level merge across chunks — every chunk's copy is kept individually rather than dropped or naively concatenated into invalid JSON).
-  - `processed_entries.fasta`: the exact sequences SignalP6 scored (post its own internal filtering), across every chunk.
+- `signalp6/<sample>/`
+  - `<sample>_signalp6_predictions.txt`: one row per protein — predicted signal-peptide
+    type (Sec/SPI, Sec/SPII, Tat/SPI, …, or `OTHER` for none) with the probability of each
+    type and the cleavage site.
+  - `<sample>_signalp6.gff3`, `region_output.gff3`: the predicted signal peptides (and
+    their regions) in GFF3 format.
+  - `processed_entries.fasta`: the sequences SignalP6 scored.
+  - `chunk_N_output.json`: SignalP6's full raw output, one file per chunk.
 
 </details>
 
-[SignalP6](https://github.com/fteufel/signalp-6.0) predicts signal peptides (all five types). Runs in `slow-sequential` mode by default (the only weight set this pipeline's reference `softwares/SignalP6/` install ships). GPU-capability is a property of which weight files are staged, not a CLI flag — see [`docs/software-setup.md`](software-setup.md). Runs once per FASTA_QC chunk; `SignalP6_MERGE` reassembles `_predictions.txt`/`.gff3`/`region_output.gff3` (keeping one shared header, then every chunk's data rows/blocks) and concatenates `processed_entries.fasta`, into the files published here.
+[SignalP 6.0](https://github.com/fteufel/signalp-6.0) predicts all five types of signal
+peptide. Runs on GPU when available (with a GPU-converted copy of its weights, see
+[software setup](software-setup.md)).
 
 ### DeepTMHMM
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `deeptmhmm/results/`
-  - `<sample>_deeptmhmm.gff3`: per-protein predicted region boundaries (signal peptide / inside / outside / transmembrane helix / beta-barrel strand).
-  - `<sample>_predicted_topologies.3line`: the same topology calls in DeepTMHMM's compact three-line-per-protein format.
-  - `summaries/chunk_N_deeptmhmm_results.md`: a short run summary, one per FASTA_QC chunk.
-  - `embeddings/`, `probabilities/`: intermediate per-protein ESM1b embeddings and per-residue class probabilities, collected across every chunk.
+- `deeptmhmm/<sample>/`
+  - `<sample>_deeptmhmm.gff3`: per-protein topology regions (signal peptide, inside,
+    outside, transmembrane helix, beta strand).
+  - `<sample>_predicted_topologies.3line`: the same calls in DeepTMHMM's three-lines-per-
+    protein format (header with the predicted type, sequence, topology string).
+  - `embeddings/`, `probabilities/`: DeepTMHMM's intermediate per-protein files (named by
+    a hash of the sequence), kept for completeness.
+  - `summaries/chunk_N_deeptmhmm_results.md`: DeepTMHMM's short run summary, one per chunk.
 
 </details>
 
-[DeepTMHMM](https://dtu.biolib.com/DeepTMHMM) predicts alpha/beta transmembrane topology. GPU-capable — auto-detects `torch.cuda.is_available()` with no CLI flag needed, driven by the same `--use_gpu` setting as the other GPU-capable tools. Runs once per FASTA_QC chunk; `DeepTMHMM_MERGE` keeps one shared GFF3 header, concatenates the per-chunk blocks/records, and collects the embeddings/probabilities into the files published here.
+[DeepTMHMM](https://dtu.biolib.com/DeepTMHMM) predicts alpha-helical and beta-barrel
+transmembrane topology. Runs on GPU when available.
 
 ### RGA classification
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `rga/rga_out/`
-  - `rga_predictions.tsv`: the main per-protein result — every input protein, one row each, with the harmonised evidence columns pulled from all six upstream tools (`sp_signalp`, `sp_phobius`, `n_tm_phobius`, `n_tm_deeptmhmm`, `cc_deepcoil`, `cc_coils`, `cc_rx_domain`, `predicted_localization`, `features_found`, …) plus the final call: `is_rga`, `rga_family` (e.g. `NLR`), `rga_subclass` (e.g. `CNL`).
-  - `rga_predictions_rga_only.tsv` / `rga_predictions_by_locus.tsv`: the same predictions filtered to RGA-positive proteins only, and collapsed to one row per locus (multiple transcript models of the same gene).
-  - `rga_summary_counts.tsv`: aggregate counts per RGA family/subclass.
-  - `rga_domain_evidence_long.tsv`: the individual domain hits behind each classification, one row per hit (long format).
-  - `accession_audit.tsv`, `unmatched_ids_report.tsv`: bookkeeping on how protein IDs were parsed/matched across the six input files.
-  - `cc_policy_sensitivity.tsv`, `cc_segment_sensitivity.tsv`: sensitivity of the coiled-coil call to the classifier's internal thresholding policy.
-  - `report.html` / `report.md`, `run_metadata.json`: `rga_classify`'s own run report and metadata (distinct from this pipeline's own [summary report](#summary-report) below, which is generated separately from these same TSVs).
-  - `cache/`, `logs/`: intermediate parser cache and the run log.
+- `rga/<sample>/`
+  - `rga_predictions.tsv`: **the main result** — every protein, one row each: the
+    evidence gathered from all six tools (`sp_signalp`, `sp_phobius`, `n_tm_phobius`,
+    `n_tm_deeptmhmm`, `cc_deepcoil`, `cc_coils`, `cc_rx_domain`,
+    `predicted_localization`, `features_found`, …) and the call: `is_rga`, `rga_family`
+    (e.g. `NLR`) and `rga_subclass` (e.g. `CNL`).
+  - `rga_predictions_rga_only.tsv`: the same table, RGA candidates only.
+  - `rga_predictions_by_locus.tsv`: one row per gene locus (collapses the transcript
+    models of the same gene) — use this for gene-level counts in polyploid genomes.
+  - `rga_summary_counts.tsv`: how many proteins fall in each RGA family/subclass.
+  - `rga_domain_evidence_long.tsv`: every individual piece of evidence behind the calls,
+    one row per hit.
+  - `report.html` / `report.md`: the classifier's own detailed report (methods, rules
+    applied, confidence, warnings, top candidates).
+  - `run_metadata.json`: exact command, settings and input checksums, for reproducibility.
+  - `accession_audit.tsv`, `unmatched_ids_report.tsv`: how protein IDs were matched across
+    the six tools' files — check these if counts look off.
+  - `cc_policy_sensitivity.tsv`, `cc_segment_sensitivity.tsv`: how the coiled-coil-based
+    classes would change under the other coiled-coil settings.
+  - `cache/`, `logs/`: the classifier's cache and log.
 
 </details>
 
-Ports the RGA classification logic from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor) (vendored unmodified, see [`CITATIONS.md`](../CITATIONS.md)). CPU-only.
+The classification logic comes from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor)
+(see [`CITATIONS.md`](../CITATIONS.md)). Its rules and thresholds are configurable — see
+[Running on another organism](usage.md#running-on-another-organism-or-with-different-classification-parameters).
 
 ### Summary report
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `summary_report/report_out/report.html`: a single self-contained HTML page (inline CSS, no external assets) built directly from `rga_classify`'s `rga_predictions.tsv`/`rga_summary_counts.tsv` — protein/RGA-candidate counts, an RGA family table, an RGA subclass table, a per-tool evidence-contribution table, links to every tool's detailed output, and a software-versions table.
+- `summary_report/<sample>/report.html`: a single self-contained page (open it in any
+  browser, no internet needed) with the number of proteins and RGA candidates, tables of
+  RGA families and subclasses, how many proteins each tool found evidence for, links to
+  this sample's detailed results in the other folders, and the software versions used.
 
 </details>
-
-This pipeline does not use MultiQC (see [`README.md`](../README.md)); this lightweight report is the summary output instead.
 
 ### Pipeline information
 
@@ -150,10 +229,13 @@ This pipeline does not use MultiQC (see [`README.md`](../README.md)); this light
 <summary>Output files</summary>
 
 - `pipeline_info/`
-  - Reports generated by Nextflow: `execution_report_*.html`, `execution_timeline_*.html`, `pipeline_dag_*.html`.
-  - `rgaprofiler_software_versions.yml`: collated tool/software versions for every process that ran, including `RGA_REPORT` itself.
-  - `params_*.json`: the parameters used for the run.
+  - `execution_report_*.html`, `execution_timeline_*.html`, `pipeline_dag_*.html`:
+    Nextflow's reports on the run (run time, CPU and memory used by every task).
+  - `params_*.json`: every parameter the run used — keep it to repeat a run exactly.
+  - `rgaprofiler_software_versions.yml`: the version of every tool that ran.
 
 </details>
 
-[Nextflow](https://docs.seqera.io/platform-cloud/reports/overview) provides excellent functionality for generating various reports relevant to the running and execution of the pipeline. This will allow you to troubleshoot errors with the running of the pipeline, and also provide you with other information such as launch commands, run times and resource usage.
+These are generated by [Nextflow](https://docs.seqera.io/platform-cloud/reports/overview)
+and are the first place to look when troubleshooting a run or checking how long each step
+took.

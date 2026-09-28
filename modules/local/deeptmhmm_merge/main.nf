@@ -10,9 +10,10 @@ process DEEPTMHMM_MERGE {
     //   - *_predicted_topologies.3line: no shared header, just repeated
     //     header+seq+topology triplets -- plain concatenation is already lossless.
     //   - embeddings/ and probabilities/: per-protein intermediate files named by a
-    //     content hash -- collected into one directory each (a hash collision, if it
-    //     ever happened, would only occur for byte-identical content, so overwriting
-    //     is harmless).
+    //     content hash -- collected into one directory each. The same name DOES occur in
+    //     several chunks whenever identical sequences land in different chunks (179 times
+    //     across 8 chunks of 2400 real R570 proteins, always byte-identical content); the
+    //     last chunk's copy wins, as with a plain per-file copy loop.
     //   - deeptmhmm_results.md: a run summary, not a per-protein record -- one copy per
     //     chunk is kept (informational only, not consumed downstream) rather than
     //     naively concatenated or dropped.
@@ -46,18 +47,41 @@ process DEEPTMHMM_MERGE {
         tail -n +2 "\$f" >> results/${prefix}_deeptmhmm.gff3
     done
 
-    cat chunk_*/*_predicted_topologies.3line > results/${prefix}_predicted_topologies.3line
+    # Every multi-file command below goes through a bash array + builtin printf |
+    # xargs, never a glob handed straight to an external command: with enough chunks
+    # (or one per-protein file per sequence, as in embeddings/) that argument list
+    # passes the kernel's ARG_MAX ("Argument list too long", exit 126). Arrays and
+    # printf never exec; xargs splits the list into as many calls as fit, in order.
+    topology_files=(chunk_*/*_predicted_topologies.3line)
+    printf '%s\\0' "\${topology_files[@]}" | xargs -0 cat -- > results/${prefix}_predicted_topologies.3line
 
     # embeddings/ always has one file per protein in practice; probabilities/ can be
     # genuinely empty (observed with the real DeepTMHMM image/weights this pipeline
-    # uses) -- '[ -e ... ] &&' skips a directory with nothing to copy instead of
-    # erroring on an unmatched glob (harmless under `set -e`: bash only aborts on the
-    # failure of the *last* command in an && list, not an earlier one).
-    for f in chunk_*/embeddings/*; do [ -e "\$f" ] && cp "\$f" results/embeddings/; done
-    for f in chunk_*/probabilities/*; do [ -e "\$f" ] && cp "\$f" results/probabilities/; done
+    # uses) -- nullglob turns an unmatched glob into an empty array, which is then
+    # skipped instead of handing cp a literal, nonexistent pattern.
+    shopt -s nullglob
+    embedding_files=(chunk_*/embeddings/*)
+    probability_files=(chunk_*/probabilities/*)
+    shopt -u nullglob
+    # One cp call refuses to write the same destination name twice ("will not
+    # overwrite just-created"), so keep only the last occurrence of each file name, in
+    # glob order -- the copy a per-file cp loop would have left in place.
+    last_by_name() { local -A last=(); local f; for f in "\$@"; do last[\${f##*/}]=\$f; done; printf '%s\\0' "\${last[@]}"; }
+    if (( \${#embedding_files[@]} )); then
+        last_by_name "\${embedding_files[@]}" | xargs -0 cp -t results/embeddings/ --
+    fi
+    if (( \${#probability_files[@]} )); then
+        last_by_name "\${probability_files[@]}" | xargs -0 cp -t results/probabilities/ --
+    fi
 
+    # Also picks up summaries/*.md -- this process's own renamed copies -- since a sample
+    # with too many chunks for one task to stage is merged in two levels (see
+    # splitForMerge in workflows/rgaprofiler.nf), feeding merged results back in here.
+    shopt -s nullglob
+    summary_files=(chunk_*/deeptmhmm_results.md chunk_*/summaries/*.md)
+    shopt -u nullglob
     i=1
-    for f in chunk_*/deeptmhmm_results.md; do
+    for f in "\${summary_files[@]}"; do
         cp "\$f" results/summaries/chunk_\${i}_deeptmhmm_results.md
         i=\$((i+1))
     done

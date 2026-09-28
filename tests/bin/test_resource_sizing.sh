@@ -19,9 +19,14 @@ head -c $((200 * 1024 * 1024)) /dev/zero | tr '\0' 'A' > "$TMP/chunk_huge.fa"  #
 probe() { # nproc meminfo chunk [extra nextflow args...] -> prints probe lines
     local nproc=$1 meminfo=$2 chunk=$3; shift 3
     ( cd "$TMP" && RGAPROFILER_NPROC="$nproc" RGAPROFILER_MEMINFO_FILE="$meminfo" \
-        nextflow run "$PROBE/main.nf" -c "$PROBE/nextflow.config" --chunk "$chunk" -work-dir "$TMP/work" "$@" 2>&1 | grep -E '^CHUNK_' )
+        nextflow run "$PROBE/main.nf" -c "$PROBE/nextflow.config" --chunk "$chunk" -work-dir "$TMP/work" "$@" 2>&1 | grep -E '^(CHUNK_|TOOL )' )
 }
 val() { printf '%s\n' "$1" | grep "^$2 " | sed -n "s/.*$3=\([0-9]*\).*/\1/p"; }
+tval() { val "$1" "TOOL $2" "$3"; }
+# Real-looking chunks for the per-tool models: 300 proteins of 450 residues, and a single
+# 35,000-residue protein (titin-sized; DeepTMHMM's VRAM need grows with the longest one).
+awk 'BEGIN { s = sprintf("%450s", ""); gsub(/ /, "M", s); for (i = 1; i <= 300; i++) printf(">p%d\n%s\n", i, s) }' > "$TMP/chunk_300x450.fa"
+awk 'BEGIN { s = sprintf("%35000s", ""); gsub(/ /, "M", s); printf(">titin\n%s\n", s) }' > "$TMP/chunk_35k.fa"
 
 # 1. Large host, small (typical --num_blocks 1000) chunk: modest, chunk-sized requests --
 #    NOT the old 150GB-per-task whole-proteome value that starved every other process.
@@ -30,7 +35,7 @@ med_mem=$(val "$out" CHUNK_MEDIUM mem_gb); high_mem=$(val "$out" CHUNK_HIGH mem_
 le "256cpu/503GB, small chunk: GPU-tool memory is chunk-sized (<= 32GB, was 150GB)" "$med_mem" 32
 le "256cpu/503GB, small chunk: InterProScan memory is chunk-sized (<= 32GB, was 100GB)" "$high_mem" 32
 check "256cpu/503GB: process_medium_chunk cpus" 6 "$(val "$out" CHUNK_MEDIUM cpus)"   # use_gpu=false => CPU fallback sizing
-check "256cpu/503GB: process_high_chunk cpus"   6 "$(val "$out" CHUNK_HIGH cpus)"
+check "256cpu/503GB: process_high_chunk cpus"   4 "$(val "$out" CHUNK_HIGH cpus)"
 # => many chunks fit at once: 503GB / that per-task memory
 echo "info - concurrent InterProScan chunks that fit in RAM alone: $(( 503 / high_mem ))"
 
@@ -58,6 +63,27 @@ le "resourceLimits caps memory" "$(val "$out" CHUNK_HIGH mem_gb)" 10
 # 5. Unusable/failed detection degrades to fixed defaults instead of crashing
 out=$(probe 4 /nonexistent/meminfo "$TMP/chunk_small.fa")
 check "meminfo unreadable: pipeline still runs and sizes both tasks" 2 "$(printf '%s\n' "$out" | grep -c '^CHUNK_')"
+
+# 6. Per-tool models (CPU mode: the probe runs with use_gpu=false) on a 24-CPU/503GB host
+out=$(probe 24 "$TMP/meminfo_big" "$TMP/chunk_300x450.fa")
+check "SignalP6 reserves the 8 threads it really runs" 8 "$(tval "$out" SIGNALP6 cpus)"
+le    "SignalP6 memory is its own (~3.5GB measured), not the old shared 14GB+" "$(tval "$out" SIGNALP6 mem_gb)" 6
+check "DeepTMHMM on CPU (local) reserves the whole host (its threads = host cores)" 24 "$(tval "$out" DEEPTMHMM cpus)"
+check "DeepLoc2 keeps 6 CPUs on CPU" 6 "$(tval "$out" DEEPLOC2 cpus)"
+check "DeepCoil2 keeps 6 CPUs on CPU (its -n_cpu)" 6 "$(tval "$out" DEEPCOIL2 cpus)"
+check "typical chunk keeps the 8h time floor" 8 "$(tval "$out" SIGNALP6 time_h)"
+out=$(probe 24 "$TMP/meminfo_big" "$TMP/chunk_300x450.fa" --deeptmhmm_cpu_threads 6)
+check "--deeptmhmm_cpu_threads 6: DeepTMHMM reserves just 6" 6 "$(tval "$out" DEEPTMHMM cpus)"
+
+# 7. DeepTMHMM's GPU-lock need follows the chunk's longest protein (11.7GB measured at 35k)
+out_typ=$(probe 24 "$TMP/meminfo_big" "$TMP/chunk_300x450.fa"); out_long=$(probe 24 "$TMP/meminfo_big" "$TMP/chunk_35k.fa")
+check "stats: longest protein read from the chunk" 35000 "$(tval "$out_long" DEEPTMHMM longest)"
+le    "DeepTMHMM VRAM need, typical chunk" "$(tval "$out_typ" DEEPTMHMM vram_mb)" 5000
+le    "DeepTMHMM VRAM need, 35k protein, covers the measured 11662MiB" 11662 "$(tval "$out_long" DEEPTMHMM vram_mb)"
+
+# 8. Time scales with the chunk: a whole proteome in one chunk gets far more than 8h on CPU
+out=$(probe 24 "$TMP/meminfo_big" "$TMP/chunk_huge.fa")
+le "SignalP6 on CPU, 200MB chunk: time limit grows past the 8h floor" 9 "$(tval "$out" SIGNALP6 time_h)"
 
 if (( fails )); then echo "$fails failure(s)"; exit 1; fi
 echo "all resource-sizing tests passed"

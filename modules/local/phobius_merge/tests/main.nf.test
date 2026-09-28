@@ -1,0 +1,53 @@
+nextflow_process {
+
+    name "Test Process PHOBIUS_MERGE"
+    script "../main.nf"
+    process "PHOBIUS_MERGE"
+
+    // FASTA_QC's seqkit split2 deals records out round-robin, so chunk 1 holds proteins
+    // 1 and 3 and chunk 2 holds protein 2 -- the merge must restore the FASTA's order.
+    test("Merges round-robin chunks back into the input FASTA's record order, one header") {
+        when {
+            process {
+                """
+                def header = "SEQENCE ID                     TM SP PREDICTION\\n"
+                def chunk1 = file("\${workDir}/c1_phobius.tsv")
+                chunk1.text = header + "protA                           0  Y n5-10c15/16o\\nprotC                           1  0 i20-40o\\n"
+                def chunk2 = file("\${workDir}/c2_phobius.tsv")
+                chunk2.text = header + "protB                           0  0 o\\n"
+                def fasta = file("\${workDir}/clean.fasta")
+                fasta.text = ">protA description\\nMKV\\n>protB\\nMKL\\n>protC\\nMKA\\n"
+
+                input[0] = [ [ id:'s1' ], [ chunk1, chunk2 ], fasta ]
+                """
+            }
+        }
+        then {
+            assert process.success
+            def lines = file(process.out.predictions[0][1]).readLines()
+            assert lines.size() == 4
+            assert lines[0].startsWith('SEQENCE ID')
+            assert lines.count { it.startsWith('SEQENCE ID') } == 1
+            assert lines[1..3].collect { it.tokenize(' ')[0] } == ['protA', 'protB', 'protC']
+        }
+    }
+
+    test("Fails when a FASTA record has no Phobius row") {
+        when {
+            process {
+                """
+                def chunk1 = file("\${workDir}/c1_phobius.tsv")
+                chunk1.text = "SEQENCE ID                     TM SP PREDICTION\\nprotA                           0  0 o\\n"
+                def fasta = file("\${workDir}/clean.fasta")
+                fasta.text = ">protA\\nMKV\\n>protB\\nMKL\\n"
+
+                input[0] = [ [ id:'s1' ], [ chunk1 ], fasta ]
+                """
+            }
+        }
+        then {
+            assert process.failed
+            assert process.stdout.join('\n').contains('no Phobius row for FASTA record protB') || process.stderr.join('\n').contains('no Phobius row for FASTA record protB')
+        }
+    }
+}

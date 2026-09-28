@@ -1,10 +1,20 @@
 # omatheuspimenta/rgaprofiler: Documentation
 
-The omatheuspimenta/rgaprofiler documentation is split into the following pages:
+New to the pipeline? Follow the numbered steps in the main [README](../README.md#usage) —
+they take you from a fresh clone to a finished test run. Then:
 
 - [Third-party software setup](software-setup.md)
-  - Start here for a first run: what license-gated software each tool needs, exactly where to download it from, and where to place it.
+  - What license-gated software each tool needs, where to download it and where to put
+    it (a required, one-time step before the first run).
 - [Usage](usage.md)
-  - An overview of how the pipeline works, how to run it and a description of all of the different command-line flags.
+  - How to run the pipeline: the samplesheet, [which setup fits your machine](usage.md#which-setup-fits-you)
+    (GPU or CPU-only, small protein sets, whole proteomes, clusters), chunking, resources,
+    and adapting the RGA classification to another organism.
 - [Output](output.md)
-  - An overview of the different results produced by the pipeline and how to interpret them.
+  - Where each result is written (`<outdir>/<tool>/<sample>/`) and how to read it.
+
+For maintainers:
+
+- [Publishing the Docker images](publishing-docker-images.md) — building, tagging and
+  publishing the pipeline's container images, including how to release an updated image.
+- [Contributing](CONTRIBUTING.md)

@@ -19,13 +19,21 @@ outdir: './results'
 interproscan_db: '/path/to/interproscan-5.78-109.0'
 
 # --- Commonly set for a real, full-scale proteome run ---
-# Fixed chunk count for FASTA_QC's splitting step -- DeepCoil2, InterProScan,
-# DeepLoc2, SignalP6 and DeepTMHMM each fan out over the result. Leave unset
-# to fall back to --fasta_qc_chunk_size (sequences per chunk) instead.
+# Fixed chunk count for FASTA_QC's splitting step -- DeepCoil2, Phobius,
+# InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each fan out over the result.
+# 'auto' picks it per sample from the sequence count and this machine's CPUs
+# (local executor). Leave unset to fall back to --fasta_qc_chunk_size (sequences
+# per chunk) instead. Keep it fixed across runs you want to compare exactly
+# (see docs/usage.md#chunking-and-reproducibility).
 num_blocks: 1000
 
 # 'auto' (default) probes for a usable NVIDIA GPU; set true/false to force it.
 use_gpu: 'auto'
+
+# CPU runs only: cap DeepTMHMM's torch threads (default: one per host core).
+# Much faster on big machines; changes its saved embeddings at float level
+# (see docs/usage.md#running-on-a-machine-without-a-gpu).
+# deeptmhmm_cpu_threads: 6
 
 # Only needed if your license-gated software (DeepTMHMM/SignalP6/DeepLoc2
 # weights) doesn't live at the default './softwares' relative to the pipeline.

@@ -1,6 +1,7 @@
 # omatheuspimenta/rgaprofiler: Usage
 
-> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+> _Every parameter, with its description and default, is listed by `nextflow run . --help`
+> (`--help <parameter>` for the details of one, `--show_hidden` to include advanced ones)._
 
 ## Introduction
 
@@ -32,7 +33,7 @@ another_sample,/absolute/path/to/another_sample.protein.fasta
 
 | Column   | Description                                                                                                                             |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample` | Custom sample name, used to label this run's outputs (e.g. `<sample>_interpro.tsv`). Spaces are automatically converted to underscores. |
+| `sample` | A name for this proteome. Each tool's results for it go in a folder with this name (e.g. `rga/<sample>/`), and file names start with it. Spaces are automatically converted to underscores. |
 | `fasta`  | Full path to a protein FASTA file for this sample. Must exist and end in `.fa`/`.fasta` (optionally gzipped, e.g. `.fasta.gz`).         |
 
 Unlike read-based nf-core pipelines, there's no concept of "multiple runs of the same
@@ -98,17 +99,8 @@ Pipeline settings can be provided in a `yaml` or `json` file via `-params-file <
 > Do not use `-c <file>` to specify parameters as this will result in errors. Custom config files specified with `-c` must only be used for [tuning process resource specifications](https://nf-co.re/docs/running/run-pipelines#configuring-pipelines), other infrastructural tweaks (such as output directories), or module arguments (args).
 
 > [!TIP]
-> **A params file is the recommended way to set this pipeline's typed parameters**
-> (`--num_blocks`, `--use_gpu`, etc.), not just a convenience for reuse. Since
-> Nextflow 26.04's v2 syntax parser, every `--flag value` given on the CLI is
-> parsed as a plain string — `--num_blocks 1000` arrives as `"1000"`, not the
-> integer `1000`. This pipeline validates and casts CLI values back to their
-> declared schema type (via nf-schema's `cast_cli_params`, `nf-schema>=2.7.2`),
-> so plain CLI flags like the ones used throughout this doc work correctly —
-> but a params file sidesteps the whole issue by preserving the real type from
-> the start, with no plugin behavior to rely on. See
-> [this nf-core blog post](https://nf-co.re/blog/2026/parameter-types) for the
-> full explanation.
+> Both ways work: command-line flags (`--num_blocks 1000`) and a params file. A params
+> file is the easiest way to keep and share the exact settings of a run.
 
 The above pipeline run specified with a params file in yaml format:
 
@@ -122,8 +114,8 @@ with:
 input: './samplesheet.csv'
 outdir: './results/'
 interproscan_db: '/path/to/interproscan-5.78-109.0'
-num_blocks: 1000
-use_gpu: 'auto'
+num_blocks: 'auto'      # or a number, e.g. 1000
+use_gpu: 'auto'         # 'auto' (default), 'true' or 'false'
 ```
 
 A filled-in copy of this is committed at [`assets/params.example.yml`](../assets/params.example.yml)
@@ -161,137 +153,271 @@ This version number will be logged in reports when you run the pipeline, so that
 
 To further assist in reproducibility, you can use share and reuse [parameter files](#running-the-pipeline) to repeat pipeline runs with the same settings without having to write out a command with every single parameter.
 
+Keep the **chunking** fixed too (`--num_blocks` / `--fasta_qc_chunk_size`, see
+[Chunking and reproducibility](#chunking-and-reproducibility)): which proteins share a
+chunk slightly affects a few tools' numbers. Every run's parameters are saved to
+`<outdir>/pipeline_info/params_<timestamp>.json`.
+
 > [!TIP]
 > If you wish to share such profile (such as upload as supplementary material for academic publications), make sure to NOT include cluster specific paths to files, nor institutional specific profiles.
 
+## Which setup fits you?
+
+The defaults work on any machine; these additions make the most of yours:
+
+| Your situation | What to add |
+|---|---|
+| A computer with an NVIDIA GPU | nothing — the GPU is detected and used automatically (`--use_gpu auto`); just do SignalP6's one-time [GPU step](software-setup.md#signalp-60) during setup |
+| A computer **without** a GPU | nothing is required; see [Running on a machine without a GPU](#running-on-a-machine-without-a-gpu) for what to expect and how to speed it up |
+| A whole proteome (tens of thousands of proteins or more) | `-profile docker,long_running` and `--num_blocks auto` |
+| A small protein set (hundreds to a few thousand proteins) | nothing; `--num_blocks auto` lets it use all your CPUs |
+| Several proteomes at once | one row per proteome in the samplesheet — each gets its own result folders |
+| A cluster (Slurm, SGE, …) | your institution's profile (`-profile docker,<institute>`), an explicit `--num_blocks N`, and [`resourceLimits`](#limiting-what-the-pipeline-may-use) |
+
 ## Sequence batching (`--num_blocks`)
 
-DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM don't run once against a
-sample's whole input FASTA — `FASTA_QC` first splits the cleaned FASTA into sequence
-blocks/chunks (always complete FASTA records, never an arbitrary line split), and each
-of those five tools runs once per chunk. Each tool's own `*_MERGE` process (e.g.
-`DEEPCOIL2_MERGE`) then reassembles the per-chunk outputs into one result per sample, so
-the final files under `--outdir` look the same either way — see
-[`docs/output.md`](output.md) for exactly how each tool's outputs are merged. Phobius
-alone still runs once per sample (it's fast and CPU-only).
+To run fast and to cope with very large proteomes, the pipeline splits each cleaned
+proteome into **chunks** and runs the six prediction tools once per chunk, in parallel.
+Each tool's results are then merged back into one result per sample, so the files in
+`--outdir` look the same however many chunks were used.
 
-This matters most for **DeepCoil2**, which can fail outright or become impractical if
-forced to process an entire large proteome as a single task. Chunking keeps every task's
-input small regardless of how large the whole proteome is.
+You choose the chunking with **one** of:
 
-Two mutually exclusive parameters control the chunking, both consumed by `FASTA_QC`:
-
-```bash
---num_blocks 1000
-```
-
-- **`--num_blocks <N>`**: request a fixed **chunk count** — split into (up to) `N`
-  chunks, balanced as evenly as possible by sequence count (via `seqkit split2
-  --by-part`). If a proteome has fewer than `N` sequences, you get one chunk per
-  sequence, not `N` empty chunks. Not hard-coded anywhere in the pipeline — set it as
-  high as you need for a very large proteome. **This is the parameter to reach for on
-  real, full-scale data.**
-- **`--fasta_qc_chunk_size <N>`** (default `5000`, used only when `--num_blocks` is
-  unset): a fixed number of **sequences per chunk** instead — the resulting chunk count
-  scales with the input's sequence total. This is the pipeline's original chunking
-  parameter (previously only consumed by InterProScan); `--num_blocks` was added on top
-  of it and takes priority whenever both would apply.
-
-A larger `--num_blocks` gives Nextflow's executor more independent, smaller tasks to
-schedule in parallel — it does **not** force that many tasks to run simultaneously; how
-many actually run at once remains governed entirely by your `-profile`/executor/resource
-configuration (`process.cpus`/`memory`, `resourceLimits`, your scheduler's queue, etc.),
-exactly like every other process in this pipeline.
+- **`--num_blocks auto`** — the pipeline picks the number of chunks from the number of
+  proteins and the CPUs of your machine. The easiest choice on a single machine.
+- **`--num_blocks <N>`** — exactly `N` chunks (e.g. `--num_blocks 1000`), balanced by
+  protein count. Use this on a cluster, or to reproduce an earlier run exactly.
+- **`--fasta_qc_chunk_size <N>`** (default `5000`, used when `--num_blocks` isn't set) — a
+  fixed number of proteins per chunk instead.
 
 ```bash
-# Full-scale proteome, split into ~1000 independent chunks per sample
+# A whole proteome on one machine
 nextflow run . \
     -profile docker,long_running \
     --input samplesheet.csv \
     --interproscan_db /path/to/interproscan-5.XX-YY.0 \
-    --num_blocks 1000 \
+    --num_blocks auto \
     --outdir results
 ```
 
-The pipeline's own log output confirms batching took effect: right after startup it
-prints which of `--num_blocks`/`--fasta_qc_chunk_size` is in effect, and once `FASTA_QC`
-finishes for every sample it prints the actual resulting chunk count — look for the
-`Sequence batching:` lines. `--outdir/fasta/<sample>_clean_chunks/` also holds the chunk
-FASTA files themselves if you want to inspect them directly.
+More chunks means more, smaller tasks that *can* run in parallel; how many actually run
+at once is decided by your machine (or cluster) and the pipeline's resource settings.
+
+**Checking what happened:** the log prints `Sequence batching:` lines — which setting is in
+effect and, once the input is cleaned, how many chunks were made. With `--num_blocks auto`
+the exact number chosen is in the FASTA_QC task's log (`num_blocks auto: ... rerun with
+--num_blocks N to reproduce exactly`). If the default chunking would leave most of your
+CPUs idle, the pipeline warns and suggests `--num_blocks auto`. The chunks themselves are
+saved in `<outdir>/fasta/<sample>/<sample>_clean_chunks/`.
+
+### Choosing a chunk count
+
+| Situation | Suggestion |
+|---|---|
+| Any run on a single machine | `--num_blocks auto` |
+| Whole proteome, explicit number | about one chunk per 300–500 proteins (e.g. 300,000 proteins → `--num_blocks 1000`) |
+| Small protein set | at least ~100 proteins per chunk — every chunk pays a fixed start-up cost to load the models |
+| GPU with 20 GB or less | at most ~5,000 proteins per chunk (DeepCoil2's GPU memory grows with chunk size) |
+| Cluster | an explicit `--num_blocks`; more chunks = more, shorter jobs |
+
+<details markdown="1">
+<summary>Technical details</summary>
+
+- `--num_blocks auto` makes chunks of 100–500 proteins: as many as needed for about two
+  rounds of InterProScan tasks (the slowest step, 4 CPUs each) across the machine's CPUs,
+  so no core idles at the end. The floor of 100 keeps the per-task model loading
+  (~15–25 s per GPU tool, far more on CPU) from dominating; the cap of 500 bounds
+  DeepCoil2's GPU memory and each task's run time. Examples: 2,000 proteins → 4 chunks on
+  an 8-CPU machine, 20 on a 256-CPU one; a 300,000-protein proteome → 600. It reads the
+  CPUs of the machine that runs Nextflow, which is why it is meant for single machines.
+- Chunks are balanced by protein count (`seqkit split2 --by-part`); a proteome with fewer
+  proteins than `N` gets one chunk per protein.
+- There is no upper limit on the number of chunks: above 1,000 chunks per sample the merge
+  steps automatically work in two stages (tested with 60,000 chunks).
+- Phobius is single-threaded, which is why it is chunked too: on the full sugarcane R570
+  proteome it took 8.8 h as a single task and ~7 min across 1,000 chunks, with an identical
+  result.
+
+</details>
+
+### Chunking and reproducibility
+
+Every protein is predicted exactly once, whatever the chunking. But a few tools process
+proteins in small groups internally, so **which proteins share a chunk can very slightly
+change their numbers**. Measured on the same 100 proteins in two different chunks:
+
+| Tool | Effect of changing the chunking |
+|---|---|
+| Phobius, DeepLoc2, DeepTMHMM | none |
+| SignalP6 | probabilities change by at most 0.000007; no prediction changed |
+| DeepCoil2 | per-residue scores change by at most 0.003 on GPU (0.19 on CPU); no residue crossed the 0.5 call threshold |
+| InterProScan | Gene3D domain boundaries/e-values differed for 1 of the 100 proteins |
+
+That is why the pipeline never changes your chunking by itself. To compare runs exactly,
+use the same `--num_blocks` / `--fasta_qc_chunk_size` (every run's parameters are saved in
+`<outdir>/pipeline_info/params_<timestamp>.json`).
+
+Even with identical settings, two things vary slightly from run to run (in any version of
+the pipeline): the row order of InterProScan's table, and — on GPU — an occasional
+last-digit change in a DeepCoil2 score (e.g. 0.247 vs 0.248), which comes from DeepCoil2's
+GPU arithmetic. Neither changed an RGA call in any comparison we made. Results from a CPU
+run and a GPU run also differ at this floating-point level.
+
+## Running on a machine without a GPU
+
+Nothing special is needed: with the default `--use_gpu auto`, the pipeline checks for an
+NVIDIA GPU and, if there is none, runs DeepCoil2, DeepLoc2, SignalP6 and DeepTMHMM on the
+CPU. (Use `--use_gpu false` to force CPU mode on a machine that does have a GPU.) SignalP6
+does not need the GPU-converted weights (`models_gpu/`) in this case.
+
+```bash
+nextflow run . \
+    -profile docker,long_running \
+    --input samplesheet.csv \
+    --interproscan_db /path/to/interproscan-5.XX-YY.0 \
+    --num_blocks auto \
+    --outdir results
+```
+
+**What to expect:**
+
+- **Results** are equivalent to a GPU run; numbers differ only at floating-point level
+  (e.g. SignalP6 probabilities in the 5th decimal). The RGA calls were identical on the
+  test data.
+- **Speed:** a CPU run is much slower. For a chunk of 300 proteins, each GPU tool takes about
+  a minute on a GPU, but on 6–8 CPU cores: DeepCoil2 ~9–15 min, DeepLoc2 ~11–15 min,
+  SignalP6 ~19–25 min. Use `-profile long_running` for anything beyond small protein sets.
+- **DeepTMHMM** always uses one thread per CPU core of the whole machine (this is built
+  into DeepTMHMM). So that several copies don't fight over the CPUs, on a single machine
+  the pipeline runs DeepTMHMM one chunk at a time on CPU, each with the whole machine to
+  itself (the other tools' tasks run before and after it). On machines with very many cores (100+) DeepTMHMM becomes very
+  slow with that many threads, and you can opt in to fewer:
+
+  ```bash
+  --deeptmhmm_cpu_threads 6
+  ```
+
+  With this, DeepTMHMM runs with 6 threads and many chunks side by side (on a 256-core
+  machine: ~14 min per chunk instead of ~3.75 h). The trade-off: its intermediate
+  per-protein files (`deeptmhmm/<sample>/embeddings/`) then differ at floating-point
+  level — the predicted topologies were identical in testing. Leave it unset to get
+  DeepTMHMM's output exactly as DeepTMHMM itself produces it.
+
+If you pass `--use_gpu true` (or `-profile gpu`) on a machine without a usable GPU, the
+pipeline warns at start-up: every GPU task would fail to start its container.
 
 ## Resource sizing and GPU sharing
 
-Two things decide how many chunk tasks run at once on a machine, and both adapt to the
-host automatically — beyond `--num_blocks` you shouldn't need to hand-tune anything.
+**You normally don't need to set any resources.** The pipeline works out what each task
+needs:
 
-### Per-chunk CPU/memory requests
+- Every chunk task asks for memory and time based on what is actually in its chunk (how
+  many proteins, how long they are) and on the tool — measured for each tool, not guessed.
+- On a single machine (the `local` executor), it reads the machine's CPUs, memory and GPUs
+  and never asks for more than the machine has. On a cluster it uses fixed per-chunk
+  defaults instead, since the machine that launches Nextflow says nothing about the
+  compute nodes.
+- A task that runs out of memory is retried once with double the memory (and time).
+- GPU tools share the GPU by memory (see [GPU sharing](#gpu-sharing---gpu_concurrency)).
 
-DeepCoil2, DeepLoc2, SignalP6, DeepTMHMM (label `process_medium_chunk`) and InterProScan
-(`process_high_chunk`) run once per chunk, so each task is sized for **one chunk**, not a
-whole proteome (whole-input processes such as `RGA_CLASSIFY` keep the generic
-`process_medium`). At task-submission time `conf/base.config`:
+### Limiting what the pipeline may use
 
-- requests memory as a per-tool floor (dominated by loading the model, not by the chunk)
-  plus a small term proportional to the chunk's FASTA size — so a big chunk (small
-  `--num_blocks`, or an unchunked run) asks for proportionally more — multiplied by the
-  attempt number, so an OOM-killed task is retried with more memory as before;
-- on the `local` executor, reads the machine's real CPUs, RAM (cgroup-aware) and GPUs via
-  `bin/detect_host_resources.sh` and **never requests more than the host has** (a task
-  asking for more than the machine can ever provide would otherwise wait forever);
-- on grid/cloud executors (Slurm, …) doesn't use the launch host's specs at all — it can't
-  know the compute node's — and applies the fixed per-chunk defaults instead.
-
-Because requests are small, Nextflow's own scheduler automatically runs as many chunks
-in parallel as the machine can hold: on a 256-CPU/503GB host that is on the order of
-~35–40 concurrent InterProScan chunks (each asks for ~12GB and 6 CPUs; RAM is the
-limit), versus the 5 that the old 100GB-per-task request allowed. (InterProScan's
-`-cpu` is only an upper bound — measured use was ~3.3 cores per chunk, and `-cpu 6` ran a
-chunk as fast as `-cpu 12`.)
-
-Auto-scaling is a default, not a replacement for explicit control. On shared machines
-and clusters cap what the pipeline may use with Nextflow's native
+On a shared machine or a cluster, cap every task with Nextflow's
 [`resourceLimits`](https://www.nextflow.io/docs/latest/reference/process.html#resourcelimits)
-in a custom config (`-c`), which is applied on top of everything above:
+in a small config file passed with `-c`:
 
-```groovy
+```groovy title="limits.config"
 process.resourceLimits = [ cpus: 64, memory: 200.GB, time: 48.h ]
 ```
 
-If a chunk task is still OOM-killed, raise `--num_blocks` (smaller chunks) first.
+```bash
+nextflow run . -profile docker --input samplesheet.csv ... -c limits.config
+```
 
-### GPU concurrency (`--gpu_concurrency`)
+On a cluster, set `time` to your queue's maximum. If a chunk task still runs out of
+memory, use more chunks (a larger `--num_blocks`).
 
-Nextflow's `local` executor has no notion of a GPU, so without help every GPU-capable
-chunk task would hit the same card at once. GPU tasks are instead mutually excluded by a
-real host-level lock (`bin/gpu_lock.sh`, a `flock` semaphore held for the whole task).
-It is independent of CPU/memory scheduling, so InterProScan's many small CPU tasks can
-neither starve the GPU tools nor be starved by them. `maxForks` additionally limits how many
-tasks *per tool* are admitted while waiting on the lock, so `--num_blocks 1000` doesn't
-park hundreds of tasks holding CPU/RAM reservations for nothing.
+<details markdown="1">
+<summary>How requests are computed (technical details)</summary>
 
-- **Default (unset):** the number of tasks allowed to share one GPU is derived from the
-  GPU's total VRAM and each tool's measured worst-case footprint — in practice **1 on any card up to 40GB** (including the
-  20GB RTX A4500 this pipeline was developed on), 2 on a 48GB card and 3 on an 80GB card.
-  That is set by the most demanding tool: measured peak VRAM per chunk task is DeepCoil2
-  ~11GB at ~300 sequences growing to ~19GB at ~5000 (it scales with chunk size), DeepTMHMM
-  ~4GB, DeepLoc2 ~3GB and SignalP6 ~2GB. Keep DeepCoil2 chunks at or below the default
-  5000 sequences on a 20GB card, since one larger chunk can exceed the whole card by itself;
-  the defaults (`--num_blocks 1000` on a ~300k-protein proteome is ~300 sequences per chunk)
-  are well inside that. It is 1
-  (strict serialization) whenever VRAM can't be determined.
-- **`--gpu_concurrency N`:** allow exactly `N` concurrent GPU tasks per GPU, if you know
-  your card can take it. On multi-GPU hosts each GPU gets its own `N` slots and each task
-  is pinned to the GPU whose slot it holds (`CUDA_VISIBLE_DEVICES` is honoured if you set it).
-- **`--gpu_concurrency 0`:** no lock and no throttle — for grid schedulers that already
-  allocate GPUs per job (the lock is only ever applied on the `local` executor anyway).
-- **`--use_gpu false`:** the tools run on CPU, there is no shared device, so neither the
-  lock nor the throttle applies and chunk tasks run as concurrently as CPU/RAM allow.
+DeepCoil2, DeepLoc2, SignalP6, DeepTMHMM (label `process_medium_chunk`) and InterProScan
+(`process_high_chunk`) run once per chunk. At submission time `conf/base.config` reads the
+chunk once (`task.ext.chunk`: number of proteins, total residues, longest protein) and sizes
+the task from it. None of this changes any output — only what each task reserves and how
+long it may run.
 
-Lock files live in `${TMPDIR:-/tmp}/rgaprofiler-gpu-locks-<uid>` (override with the
-`RGAPROFILER_GPU_LOCK_DIR` environment variable; must be a local filesystem, not NFS). If
-locking is impossible (no `flock`, unwritable directory) the task warns and runs unlocked
-rather than failing. Each task's `.gpu_lock.log` records which slot it took and how long it
-waited — note that this wait is included in the `realtime` column of Nextflow's trace file.
+**Memory** = a per-tool floor + a term proportional to the chunk's FASTA size, × the
+attempt number. Peak memory was measured for every task of a real 1,000-chunk R570 run
+(joined to each chunk's composition) and for single proteins of 1,000–35,000 residues:
+
+| Tool | 300-protein chunk | 4,913-protein chunk | one 35,000-residue protein | Requested (300-protein chunk) |
+|---|---|---|---|---|
+| SignalP6 | 3.1–3.6 GB | 4.3 GB | 3.5 GB (1.9 GB on CPU) | 5 GB |
+| DeepTMHMM | 5.4–5.5 GB (6.5 GB on CPU) | 5.5 GB | 5.4 GB | 9 GB |
+| DeepLoc2 | 9.9–10.3 GB | 10.3 GB | 10.0 GB | 13 GB |
+| DeepCoil2 | 5.7–6.8 GB (4.0 GB on CPU) | 16.0 GB | 5.0 GB | 9 GB |
+| InterProScan | 4.5–7.8 GB | ~13–14 GB (extrapolated) | 6.0 GB | 11 GB |
+
+Memory is set mostly by the model, not by protein length (these tools truncate or window
+long proteins); only DeepCoil2 and InterProScan grow with the amount in the chunk.
+
+**Time** = the larger of the previous fixed limit (8 h; 16 h for InterProScan) and 5× the
+measured throughput for the chunk's residues on that device (GPU or CPU), × the attempt
+number — so a large chunk on CPU is not killed at a fixed limit. `-profile long_running`
+replaces these with its own fixed multi-day limits.
+
+**CPUs** match what each tool really uses: InterProScan 4 (it used ~3.1 cores at `-cpu 4`
+or `6`); GPU tools 4; on CPU, DeepCoil2 and DeepLoc2 6, SignalP6 8 (it always runs 8
+threads), and DeepTMHMM the whole machine (see [above](#running-on-a-machine-without-a-gpu)).
+
+</details>
+
+### GPU sharing (`--gpu_concurrency`)
+
+On a single machine, GPU tasks share the GPU **by memory**: small tools (SignalP6,
+DeepLoc2, DeepTMHMM on typical proteins) run side by side while they fit on the card, and
+DeepCoil2 always gets the GPU to itself. This does not change any result, and it makes the
+GPU part of a run about 1.5× faster (35.7 instead of 55.6 min on 2,400 proteins).
+
+- **Default (unset):** share by memory, as above. If the GPU's memory can't be read, one
+  task at a time.
+- **`--gpu_concurrency N`:** exactly `N` GPU tasks at a time per GPU, whatever the tool
+  (`1` = strictly one at a time).
+- **`--gpu_concurrency 0`:** no limit — for clusters whose scheduler already hands out GPUs
+  per job.
+
+<details markdown="1">
+<summary>How GPU sharing works (technical details)</summary>
+
+Nextflow's `local` executor has no notion of a GPU, so the pipeline uses a host-level lock
+(`bin/gpu_lock.sh`, `flock`-based, held for the whole task and released automatically if
+the task dies). Each GPU's usable memory (85%) is divided into 512 MiB units, and a task
+holds as many units as its tool's measured peak GPU memory (`ext.gpu_vram_mb` in
+`conf/base.config`, with ~15% headroom):
+
+- SignalP6 ~2.2 GB and DeepLoc2 ~3.6 GB — flat, they truncate long proteins;
+- DeepTMHMM — computed per chunk from its longest protein (measured 3.7 GB at 2,500
+  residues, 5.6 GB at 10,000, 11.7 GB at 35,000; ~4.1 GB for a typical plant chunk), so a
+  chunk with a titin-sized protein runs almost alone on the card;
+- DeepCoil2 — the whole GPU: its memory grows with both protein length and chunk size
+  (~10 GB for 300 proteins, ~19 GB for ~5,000), so no fixed estimate is safe.
+
+On a 20 GB card that allows up to 3 DeepTMHMM, 4 DeepLoc2 or 6 SignalP6 tasks at once, or
+a mix. These tools leave the GPU mostly idle while loading models and doing CPU-side work
+(21–44% average use when running alone), which is where the speed-up comes from. The same
+chunk run alone and while sharing gave identical results for all four tools. Extremely long
+proteins can still exceed a small card with a single tool (DeepTMHMM ~11.7 GB at 35,000
+residues).
+
+`maxForks` also limits how many tasks per tool wait for the GPU at once, so thousands of
+chunks don't sit reserving CPUs and memory while they wait. Lock files live in
+`${TMPDIR:-/tmp}/rgaprofiler-gpu-locks-<uid>` (change with the `RGAPROFILER_GPU_LOCK_DIR`
+environment variable; it must be on a local disk, not NFS). If locking is impossible, the
+task warns and runs without the lock. Each GPU task's `.gpu_lock.log` records what it held
+and how long it waited (that wait counts in the trace's `realtime`). On multi-GPU machines
+each task is pinned to the GPU it holds (`CUDA_VISIBLE_DEVICES` is honoured).
+
+</details>
 
 ## Running on another organism, or with different classification parameters
 
@@ -515,7 +641,11 @@ Specify the path to a specific config file (this is a core Nextflow command). Se
 
 ### Resource requests
 
-Whilst the default requirements set within the pipeline will hopefully work for most people and with most input data, you may find that you want to customise the compute resources that the pipeline requests. Each step in the pipeline has a default set of requirements for number of CPUs, memory and time. For most of the pipeline steps, if the job exits with any of the error codes specified [here](https://github.com/nf-core/rnaseq/blob/4c27ef5610c87db00c3c5a3eed10b1d161abf575/conf/base.config#L18) it will automatically be resubmitted with higher resources request (2 x original, then 3 x original). If it still fails after the third attempt then the pipeline execution is stopped.
+The pipeline sizes its own requests (see [Resource sizing](#resource-sizing-and-gpu-sharing)),
+so you rarely need to change them. If a task fails because it ran out of memory or time,
+it is automatically retried once with double the memory and time; if it fails again, the
+run stops and tells you which task failed. To cap everything, use
+[`resourceLimits`](#limiting-what-the-pipeline-may-use).
 
 To change the resource requests, please see the [max resources](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources) and [customise process resources](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#customize-process-resources) section of the nf-core website.
 

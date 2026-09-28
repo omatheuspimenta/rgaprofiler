@@ -58,10 +58,20 @@ process SIGNALP6_MERGE {
         tail -n +2 "\$f" >> results/region_output.gff3
     done
 
-    cat chunk_*/processed_entries.fasta > results/processed_entries.fasta
+    # Array + builtin printf | xargs rather than 'cat chunk_*/...': a glob handed
+    # straight to cat grows with the chunk count and eventually passes the kernel's
+    # ARG_MAX ("Argument list too long", exit 126); xargs batches it, in order.
+    fasta_files=(chunk_*/processed_entries.fasta)
+    printf '%s\\0' "\${fasta_files[@]}" | xargs -0 cat -- > results/processed_entries.fasta
 
+    # Also picks up chunk_*_output.json -- this process's own renamed copies -- since a
+    # sample with too many chunks for one task to stage is merged in two levels (see
+    # splitForMerge in workflows/rgaprofiler.nf), feeding merged results back in here.
+    shopt -s nullglob
+    json_files=(chunk_*/output.json chunk_*/chunk_*_output.json)
+    shopt -u nullglob
     i=1
-    for f in chunk_*/output.json; do
+    for f in "\${json_files[@]}"; do
         cp "\$f" results/chunk_\${i}_output.json
         i=\$((i+1))
     done

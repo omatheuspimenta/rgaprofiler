@@ -21,6 +21,11 @@ process DEEPLOC2 {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def device = task.ext.use_gpu ? 'cuda' : 'cpu'
+    // On CPU, torch otherwise starts one thread per host core in every task -- dozens of
+    // concurrent chunk tasks then oversubscribe the machine. Pinning it to the task's own
+    // CPUs leaves the output unchanged (a real 300-sequence chunk gave a byte-identical
+    // CSV at 6 vs 64 threads, 689s vs 669s). The GPU path is left exactly as it was.
+    def cpu_threads = task.ext.use_gpu ? '' : "export OMP_NUM_THREADS=${task.cpus}"
     """
     mkdir -p results/
 
@@ -37,6 +42,7 @@ process DEEPLOC2 {
     # instead of baking the license-gated/oversized weights into the image.
     ln -sfn \$(realpath ${deeploc2_models}) /opt/deeploc2/DeepLoc2/models
     export TORCH_HOME=\$(realpath ${torch_cache})
+    ${cpu_threads}
 
     deeploc2 -f ${fasta} -o results/ -m Fast -d ${device} ${args}
     mv results/results_*.csv results/${prefix}_deeploc2.csv

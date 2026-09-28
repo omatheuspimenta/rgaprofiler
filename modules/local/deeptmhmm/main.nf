@@ -20,6 +20,17 @@ process DEEPTMHMM {
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
+    // predict.py sets torch's thread count to os.cpu_count(): every core of the host,
+    // whatever the task was given. By default that is left exactly as it is, because the
+    // thread count changes the published embeddings at the floating-point level. Only on
+    // CPU, and only if --deeptmhmm_cpu_threads N was set (task.ext.cpu_threads, see
+    // conf/base.config), os.cpu_count() is overridden to N for predict.py alone -- on a
+    // real 300-protein chunk this gave identical topologies/GFF3 with 5 of 300 embedding
+    // files differing bitwise, in 836s at 6 threads vs ~3.75h at the host's 256.
+    def threads = task.ext.use_gpu ? null : task.ext.cpu_threads
+    def predict = threads ?
+        "python -c \"import os, sys; os.cpu_count = lambda: ${threads}; sys.argv = ['predict.py', '--fasta', '\${task_dir}/${fasta}', '--output-dir', '\${task_dir}/results']; exec(compile(open('predict.py').read(), 'predict.py', 'exec'))\"" :
+        "python predict.py --fasta \"\${task_dir}/${fasta}\" --output-dir \"\${task_dir}/results\""
     """
     # Nextflow's docker profile runs containers as the host UID, which has no
     # passwd entry in the image and thus no \$HOME -- point it at the task work
@@ -41,7 +52,7 @@ process DEEPTMHMM {
 
     # predict.py also creates --output-dir itself and errors if it already exists.
     cd /opt/deeptmhmm
-    python predict.py --fasta "\${task_dir}/${fasta}" --output-dir "\${task_dir}/results"
+    ${predict}
     cd "\${task_dir}"
 
     mv results/TMRs.gff3 results/${prefix}_deeptmhmm.gff3

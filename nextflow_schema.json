@@ -61,18 +61,25 @@
                     "fa_icon": "fas fa-folder-tree"
                 },
                 "use_gpu": {
-                    "type": "string",
+                    "type": ["string", "boolean"],
                     "default": "auto",
-                    "enum": ["auto", "true", "false"],
+                    "enum": ["auto", "true", "false", true, false],
                     "description": "Whether to use a GPU for GPU-capable tools (DeepCoil2, DeepLoc2, DeepTMHMM, SignalP6). 'auto' probes for a usable NVIDIA GPU on the executing host; 'true'/'false' force it on/off.",
                     "help_text": "GPU-capable processes are labelled `process_gpu`. When GPU usage resolves to true, the container is launched with `--gpus all` (Docker/Podman) or `--nv` (Singularity/Apptainer) and requests an accelerator. Non-GPU-capable tools (Phobius, InterProScan, fasta_qc) ignore this setting entirely. 'auto' detection reflects whatever host runs bin/detect_gpu.sh at process-scheduling time; under cluster executors where that may differ from the actual compute node, set this explicitly instead of relying on 'auto'.",
+                    "fa_icon": "fas fa-microchip"
+                },
+                "deeptmhmm_cpu_threads": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "CPU runs only: cap DeepTMHMM's PyTorch threads to N. Unset (default) keeps DeepTMHMM's own setting of one thread per host core.",
+                    "help_text": "DeepTMHMM's predict.py sets its PyTorch thread count to the number of CPU cores of the whole host, whatever the task was given. On CPU (`--use_gpu false`, or `auto` without a GPU) that is slow on large hosts -- one 300-protein chunk took ~3.75h with 256 threads on a 256-core host vs 836s with 6 -- and several such tasks at once oversubscribe the machine (by default the pipeline therefore gives each CPU-mode DeepTMHMM task the whole host on the `local` executor). Setting N (e.g. 6) runs it with N threads and reserves N CPUs per task instead, so many chunks run side by side. Trade-off: the thread count changes DeepTMHMM's saved embeddings (`deeptmhmm/<sample>/embeddings/`) at the floating-point level; the predicted topologies and GFF3 were identical in testing. Has no effect on GPU runs.",
                     "fa_icon": "fas fa-microchip"
                 },
                 "gpu_concurrency": {
                     "type": "integer",
                     "minimum": 0,
-                    "description": "Maximum number of GPU tasks allowed to run concurrently on each GPU (local executor). Unset = derive from the GPU's VRAM (1 when that can't be determined); 0 = no GPU lock or throttle.",
-                    "help_text": "DeepCoil2, DeepLoc2, SignalP6 and DeepTMHMM tasks (one per chunk) are mutually excluded on the GPU by a real host-level lock (`bin/gpu_lock.sh`, a `flock` semaphore), independent of the CPU/memory scheduling that other processes such as InterProScan compete for. Unset (the default) sizes the number of concurrent tasks per GPU from the GPU's total VRAM and each tool's measured worst-case footprint -- which is 1 (strict serialization) unless VRAM is known to fit more, or can't be determined. Set an explicit N to allow up to N concurrent GPU tasks per GPU if you know your card can take it, or 0 to disable the lock and the per-process throttle entirely (for grid schedulers such as Slurm that already allocate GPUs to jobs, or with `--use_gpu false`, where neither applies anyway). Only applied on the `local` executor.",
+                    "description": "Maximum number of GPU tasks allowed to run concurrently on each GPU (local executor). Unset = VRAM-weighted sharing (tasks share a GPU while their tools' measured peak VRAM fits; DeepCoil2 always alone; 1 per GPU when VRAM can't be determined); 0 = no GPU lock or throttle.",
+                    "help_text": "DeepCoil2, DeepLoc2, SignalP6 and DeepTMHMM tasks (one per chunk) are mutually excluded on the GPU by a real host-level lock (`bin/gpu_lock.sh`, a `flock` semaphore), independent of the CPU/memory scheduling that other processes such as InterProScan compete for. Unset (the default) shares each GPU by VRAM: every task holds as much of the card's usable VRAM as its tool's measured peak needs (SignalP6 ~2.2GB, DeepLoc2 ~3.6GB, DeepTMHMM ~4GB for typical proteins, computed per chunk from its longest protein), so light tools run side by side while their sum fits; DeepCoil2, whose VRAM grows with chunk size, always takes a whole GPU; and it falls back to 1 task per GPU when VRAM can't be determined. Sharing does not change any tool's output. Set an explicit N to allow exactly N concurrent GPU tasks of any tool per GPU (e.g. 1 for strict serialization), or 0 to disable the lock and the per-process throttle entirely (for grid schedulers such as Slurm that already allocate GPUs to jobs, or with `--use_gpu false`, where neither applies anyway). Only applied on the `local` executor.",
                     "fa_icon": "fas fa-lock"
                 },
                 "fasta_qc_chunk_size": {
@@ -80,15 +87,16 @@
                     "default": 5000,
                     "minimum": 1,
                     "description": "Number of sequences per chunk when FASTA_QC splits the cleaned input FASTA. Ignored when --num_blocks is set.",
-                    "help_text": "FASTA_QC always cleans the input (dedup, strip stop-codon '*', uppercase) and additionally splits the result into chunks, which DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each fan out over (one task per chunk, merged back into one result per sample afterwards). This parameter fixes the number of sequences in each chunk, so the resulting chunk count scales with input size; use --num_blocks instead to fix the chunk count directly.",
+                    "help_text": "FASTA_QC always cleans the input (dedup, strip stop-codon '*', uppercase) and additionally splits the result into chunks, which DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each fan out over (one task per chunk, merged back into one result per sample afterwards). This parameter fixes the number of sequences in each chunk, so the resulting chunk count scales with input size; use --num_blocks instead to fix the chunk count directly.",
                     "fa_icon": "fas fa-layer-group",
                     "hidden": true
                 },
                 "num_blocks": {
-                    "type": "integer",
+                    "type": ["integer", "string"],
                     "minimum": 1,
-                    "description": "Number of sequence blocks/chunks to split each sample's input FASTA into (e.g. --num_blocks 1000), for DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM to each fan out over.",
-                    "help_text": "Overrides --fasta_qc_chunk_size's fixed sequences-per-chunk sizing with a fixed chunk *count* instead: FASTA_QC splits the cleaned input into (up to) this many chunks, balanced as evenly as possible by sequence count but not guaranteed exactly equal. DeepCoil2, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM then each run once per chunk instead of once per whole proteome -- important for DeepCoil2 in particular, which can fail or become impractical on a very large proteome in a single task. A larger value produces more, smaller, independent tasks for Nextflow's executor to schedule in parallel (subject to its own resource/executor configuration) -- it does not itself force that many tasks to run at once. Leave unset to keep splitting by --fasta_qc_chunk_size instead.",
+                    "pattern": "^auto$",
+                    "description": "Number of sequence blocks/chunks to split each sample's input FASTA into (e.g. --num_blocks 1000), for DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM to each fan out over -- or 'auto' to choose it from each sample's sequence count and this host's CPUs.",
+                    "help_text": "Overrides --fasta_qc_chunk_size's fixed sequences-per-chunk sizing with a fixed chunk *count* instead: FASTA_QC splits the cleaned input into (up to) this many chunks, balanced as evenly as possible by sequence count but not guaranteed exactly equal. DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM then each run once per chunk instead of once per whole proteome -- important for DeepCoil2 in particular, which can fail or become impractical on a very large proteome in a single task. A larger value produces more, smaller, independent tasks for Nextflow's executor to schedule in parallel (subject to its own resource/executor configuration) -- it does not itself force that many tasks to run at once. Leave unset to keep splitting by --fasta_qc_chunk_size instead. 'auto' picks the count per sample after cleaning: chunks of 100-500 sequences, as many as needed for about two rounds of InterProScan tasks (4 CPUs each) across the CPUs of the machine running the pipeline (so it is meant for the local executor; on a cluster give an explicit number). The chosen count is written to FASTA_QC's .command.err and can be passed back explicitly to reproduce a run exactly -- which proteins share a chunk slightly affects DeepCoil2 scores, SignalP6 probabilities and InterProScan's Gene3D domain boundaries.",
                     "fa_icon": "fas fa-layer-group"
                 }
             }

@@ -4,8 +4,10 @@
 #
 # This is a straight vendored copy (docker/rga_classify/src/, code + config
 # only, no test suite) run exactly as documented upstream -- `uv sync` then
-# `uv run python code/rgas/rgas_prediction.py`, no patches, no rewritten
-# classification rules. Nothing here is license-gated (MIT-style project,
+# `uv run python code/rgas/rgas_prediction.py`, no rewritten classification
+# rules. One local patch, to be upstreamed: code/rgas/rga/evidence.py's
+# _build_long() returns an empty evidence table instead of crashing with
+# "No objects to concatenate" when a sample has no evidence at all (0.0.2). Nothing here is license-gated (MIT-style project,
 # pure Python + pandas/numpy/PyYAML/rich, no model weights), so unlike
 # deeploc2/signalp6/deeptmhmm this image needs nothing mounted from
 # softwares/ at runtime.

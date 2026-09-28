@@ -1032,7 +1032,13 @@ def _build_long(ips, records: list[dict], available: dict[str, bool]) -> pd.Data
         for column, tool, analysis, feature in _INTERVAL_SOURCES
         if available[_INTERVAL_CHANNEL[column]]
     )
-    long = pd.concat([f for f in frames if not f.empty], ignore_index=True)
+    non_empty = [f for f in frames if not f.empty]
+    if not non_empty:
+        # No evidence at all (e.g. a protein set with no InterProScan hits and no
+        # DeepCoil2/TM intervals): pd.concat([]) raises "No objects to concatenate",
+        # which failed the whole run instead of reporting zero RGAs.
+        return pd.DataFrame(columns=list(LONG_COLUMNS))
+    long = pd.concat(non_empty, ignore_index=True)
     return long.sort_values(
         ["protein_id", "feature", "tool", "start"], kind="stable"
     ).reset_index(drop=True)

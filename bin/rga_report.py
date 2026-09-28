@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import html
 from pathlib import Path
+from urllib.parse import quote
 
 import pandas as pd
 import yaml
@@ -151,17 +152,21 @@ def render_html(
         ["Process", "Tool", "Version"], [[p, t, v] for p, t, v in versions]
     )
 
+    # This page is published as <outdir>/summary_report/<sample>/report.html and every
+    # tool's results as <outdir>/<tool>/<sample>/ (conf/modules.config), so each link
+    # goes up two levels and back down into the same sample's folder.
+    sample_dir = quote(sample_name)
     links = "".join(
-        f'<li><a href="{href}">{label}</a></li>'
+        f'<li><a href="{esc(href)}">{label}</a></li>'
         for label, href in [
-            ("Full RGA classification report (rga_classify)", "../rga/rga_out/report.html"),
-            ("Per-protein predictions (rga_predictions.tsv)", "../rga/rga_out/rga_predictions.tsv"),
-            ("InterProScan domain hits", "../interproscan/"),
-            ("Phobius", "../phobius/"),
-            ("DeepTMHMM", "../deeptmhmm/"),
-            ("SignalP 6.0", "../signalp6/"),
-            ("DeepLoc 2.0", "../deeploc2/"),
-            ("DeepCoil2", "../deepcoil2/"),
+            ("Full RGA classification report (rga_classify)", f"../../rga/{sample_dir}/report.html"),
+            ("Per-protein predictions (rga_predictions.tsv)", f"../../rga/{sample_dir}/rga_predictions.tsv"),
+            ("InterProScan domain hits", f"../../interproscan/{sample_dir}/"),
+            ("Phobius", f"../../phobius/{sample_dir}/"),
+            ("DeepTMHMM", f"../../deeptmhmm/{sample_dir}/"),
+            ("SignalP 6.0", f"../../signalp6/{sample_dir}/"),
+            ("DeepLoc 2.0", f"../../deeploc2/{sample_dir}/"),
+            ("DeepCoil2", f"../../deepcoil2/{sample_dir}/"),
         ]
     )
 
