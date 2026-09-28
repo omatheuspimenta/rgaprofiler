@@ -543,10 +543,11 @@ process {
 
 **3. Make it the pipeline's own default.** Edit
 `docker/rga_classify/src/code/rgas/config/rga_config.yaml` directly in this repo, then
-rebuild and publish a new `rga_classify` image (and bump its tag) following
-[`docs/publishing-docker-images.md`](publishing-docker-images.md) — update the `container`
-line in both `modules/local/rga_classify/main.nf` and `modules/local/rga_report/main.nf`
-(it deliberately reuses the same image) to point at the new tag. This is the right choice
+build the image under a new tag
+(`docker build -t <registry>/rga_classify:<new_tag> -f docker/rga_classify/Dockerfile docker/rga_classify`),
+push it to a registry your machines can pull from, and point the `container` line of both
+`modules/local/rga_classify/main.nf` and `modules/local/rga_report/main.nf` (the report
+reuses the same image) at the new tag. This is the right choice
 once a new organism's config is settled and you want every future run to use it without
 passing `-c`/`ext.args` at all.
 
@@ -662,9 +663,9 @@ Dockerfiles under `docker/`; conda is not a supported alternative either (see
 To use a different image tag for a tool, override that module's `container` directive
 via a custom config (`-c custom.config`), e.g.
 `process { withName: 'DEEPTMHMM' { container = 'ghcr.io/omatheuspimenta/deeptmhmm:my-tag' } }`.
-To change what an image actually contains, edit the corresponding `docker/<tool>/Dockerfile`
-and rebuild/publish it yourself — see
-[`docs/publishing-docker-images.md`](publishing-docker-images.md).
+To change what an image actually contains, edit the corresponding `docker/<tool>/Dockerfile`,
+build it under a new tag (`docker build -t <registry>/<tool>:<new_tag> -f docker/<tool>/Dockerfile docker/<tool>`,
+run from the pipeline root), push it, and point the module's `container` line at it.
 
 ### Custom Tool Arguments
 

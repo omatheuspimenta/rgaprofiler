@@ -6,8 +6,13 @@ name: Build and publish Docker images
 # Triggers:
 #   - Manual (workflow_dispatch): build/publish on demand, optionally just one image,
 #     without needing to cut a release first (e.g. after a Dockerfile fix).
-#   - On a published GitHub Release: every tagged release gets fresh images for all
-#     seven tools automatically, so a release is never silently paired with stale images.
+#   - On a published GitHub Release: every image whose tag isn't published yet is built.
+#
+# An image tag that already exists in the registry is never rebuilt or replaced, unless a
+# manual run ticks `overwrite`: a rebuild of an unchanged Dockerfile can still resolve
+# different system/Python packages than the image every earlier run used, so a published
+# tag must keep meaning the same image. Changed image -> new tag (see
+# docs/publishing-docker-images.md, "Releasing an updated image").
 #
 # Auth: uses the repo's automatic GITHUB_TOKEN (see the `permissions:` block below) --
 # no personal access token or repository secret needs to be created for this to work.
@@ -31,6 +36,11 @@ on:
           - signalp6
           - deeptmhmm
           - rga_classify
+      overwrite:
+        description: "Replace tags that are already published (normally leave off: bump the tag instead)"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -89,7 +99,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - id: published
+        name: Skip if this tag is already published
+        run: |
+          ref="ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ matrix.tag }}"
+          if docker buildx imagetools inspect "$ref" > /dev/null 2>&1 && [ "${{ inputs.overwrite }}" != "true" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$ref is already published -- not rebuilding it. Bump the tag for a changed image, or run manually with 'overwrite' to replace it."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: docker/build-push-action@v6
+        if: steps.published.outputs.skip != 'true'
         with:
           context: docker/${{ matrix.image }}
           file: docker/${{ matrix.image }}/Dockerfile

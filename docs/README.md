@@ -13,8 +13,4 @@ they take you from a fresh clone to a finished test run. Then:
 - [Output](output.md)
   - Where each result is written (`<outdir>/<tool>/<sample>/`) and how to read it.
 
-For maintainers:
-
-- [Publishing the Docker images](publishing-docker-images.md) — building, tagging and
-  publishing the pipeline's container images, including how to release an updated image.
-- [Contributing](CONTRIBUTING.md)
+For contributors: [Contributing](CONTRIBUTING.md).

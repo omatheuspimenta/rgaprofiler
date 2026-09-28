@@ -3,7 +3,7 @@ process RGA_CLASSIFY {
     label 'process_medium' // CPU-only; the reference R570 run is ~72s / 2.84GB peak RSS at --workers 4 (ARCHITECTURE.md §14)
 
     // Set container to use for this process
-    container 'ghcr.io/omatheuspimenta/rga_classify:0.0.1'
+    container 'ghcr.io/omatheuspimenta/rga_classify:0.0.2'
     // container 'rga_classify:baseline' // local dev build
 
     input:

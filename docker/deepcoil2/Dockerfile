@@ -17,9 +17,21 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_DEFAULT_TIMEOUT=1000
 
+# Debian 11 (bullseye) is past end-of-life, and python:3.7 images exist only for it (and
+# older) -- DeepCoil's pinned stack needs Python 3.7, so the base can't simply move on.
+# Its packages are moving off deb.debian.org: in Sep 2026 the bullseye-security index there
+# still listed updates whose .deb files already returned 404 (apt-get exit code 100), and
+# archive.debian.org didn't carry bullseye-security yet. So both stages install from the
+# permanent archive's `main` and `bullseye-updates` only. That yields the same OpenBLAS
+# (0.3.13+ds-3+deb11u1) as the image published as 2.0.2. Check-Valid-Until=false is
+# needed because archived Release files are past their expiry date by design.
+ARG DEBIAN_ARCHIVE_SOURCES="deb http://archive.debian.org/debian bullseye main\ndeb http://archive.debian.org/debian bullseye-updates main\n"
+
 # Build tools are needed to compile jsonnet (allennlp dependency) from source.
 # libopenblas speeds up numpy; unzip is needed for the seqvec weights below.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN printf "${DEBIAN_ARCHIVE_SOURCES}" > /etc/apt/sources.list \
+    && rm -f /etc/apt/sources.list.d/* \
+    && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y --no-install-recommends \
         build-essential \
         g++ \
         cmake \
@@ -126,7 +138,11 @@ ENV PYTHONUNBUFFERED=1 \
 # procps (for `ps`) is required by Nextflow itself to collect task resource metrics
 # inside the container — without it, task execution fails with "Command 'ps'
 # required by nextflow to collect task metrics cannot be found".
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Same archive sources as the builder stage (see there for why).
+ARG DEBIAN_ARCHIVE_SOURCES="deb http://archive.debian.org/debian bullseye main\ndeb http://archive.debian.org/debian bullseye-updates main\n"
+RUN printf "${DEBIAN_ARCHIVE_SOURCES}" > /etc/apt/sources.list \
+    && rm -f /etc/apt/sources.list.d/* \
+    && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y --no-install-recommends \
         libopenblas-dev \
         procps \
     && rm -rf /var/lib/apt/lists/* \
