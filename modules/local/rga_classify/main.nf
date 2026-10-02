@@ -7,7 +7,7 @@ process RGA_CLASSIFY {
     // container 'rga_classify:baseline' // local dev build
 
     input:
-    tuple val(meta), path(interproscan_tsv), path(phobius_tsv), path(deeptmhmm_gff3), path(signalp_txt), path(deeploc_csv), path(deepcoil_dir, stageAs: 'deepcoil_data')
+    tuple val(meta), path(interproscan_tsv), path(phobius_tsv), path(deeptmhmm_gff3), path(signalp_txt), path(deeploc_csv), path(deepcoil_dir, stageAs: 'deepcoil_data'), val(run_settings)
 
     output:
     tuple val(meta), path("rga_out/*"), emit: results
@@ -16,6 +16,10 @@ process RGA_CLASSIFY {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    // Pipeline-level settings that change some tools' numbers (chunking, CPU vs GPU --
+    // see docs/usage.md#chunking-and-reproducibility) but that rga_classify itself never
+    // sees. Kept on one line: a multi-line value would break the script's indentation.
+    def settings_json = groovy.json.JsonOutput.toJson(run_settings ?: [:])
     """
     # Own output dir deliberately not named 'results' -- DEEPCOIL2's directory-shaped input
     # (staged here as deepcoil_data/, see the stageAs above) is itself named 'results' at
@@ -37,6 +41,22 @@ process RGA_CLASSIFY {
         --organism-name ${prefix} \\
         --workers ${task.cpus} \\
         ${args}
+
+    # Fold those settings into rga_classify's own run_metadata.json, so one file
+    # records everything needed to reproduce (or explain differences between) runs.
+    cat <<-'END_SETTINGS' > pipeline_settings.json
+    ${settings_json}
+    END_SETTINGS
+    uv run --project /opt/rga_classify python - <<-'END_PY'
+    import json
+    path = "rga_out/run_metadata.json"
+    with open(path) as f:
+        metadata = json.load(f)
+    with open("pipeline_settings.json") as f:
+        metadata["pipeline_settings"] = json.load(f)
+    with open(path, "w") as f:
+        f.write(json.dumps(metadata, indent=2, sort_keys=True, default=str))
+    END_PY
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

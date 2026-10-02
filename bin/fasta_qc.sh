@@ -37,14 +37,19 @@ if [ -s "$TMPDIR/duplicates.log" ]; then
     sed 's/^/WARNING: duplicate ID removed -> /' "$TMPDIR/duplicates.log" >&2
 fi
 
-# 2. Strip stray whitespace/CR/asterisks from the sequence only (-s), then uppercase
-seqkit replace -s -p '[ \t\r\*]' -r '' "$TMPDIR/step1.fasta" \
+# 2. Strip stray whitespace/CR from the sequence only (-s), then the terminal stop
+#    codon(s) -- only at the very end, after the whitespace is gone so 'MKV* ' still
+#    counts as terminal -- then uppercase. An internal '*' is NOT deleted here:
+#    that would splice the residues on either side into a sequence that doesn't
+#    exist. Step 3 turns it into X and logs it instead.
+seqkit replace -s -p '[ \t\r]' -r '' "$TMPDIR/step1.fasta" \
+    | seqkit replace -s -p '\*+$' -r '' \
     | seqkit seq -u -o "$TMPDIR/step2.fasta"
 
-# 3. Replace any remaining invalid characters with X, logging how many were
-#    changed per sequence. seqkit has no built-in "replace + log" combo, so
-#    this step drops to tabular format, does the substitution in awk, and
-#    converts back to FASTA.
+# 3. Replace internal stop codons and any remaining invalid characters with X,
+#    logging how many were changed per sequence. seqkit has no built-in
+#    "replace + log" combo, so this step drops to tabular format, does the
+#    substitution in awk, and converts back to FASTA.
 seqkit fx2tab "$TMPDIR/step2.fasta" > "$TMPDIR/step2.tab"
 
 awk -v valid="$VALID_AA" '
@@ -58,6 +63,13 @@ BEGIN { FS="\t"; OFS="\t" }
     if (seq == "") {
         print "WARNING: sequence " id " ignored. Empty sequence." > "/dev/stderr"
         next
+    }
+
+    # Counted apart from other invalid characters: an internal stop usually means a
+    # pseudogene or a broken gene model, which is worth flagging on its own.
+    stops = gsub(/\*/, "X", seq)
+    if (stops > 0) {
+        print "WARNING: " stops " internal stop codon(s) (*) in sequence " id " replaced with X" > "/dev/stderr"
     }
 
     count = gsub("[^" valid "]", "X", seq)

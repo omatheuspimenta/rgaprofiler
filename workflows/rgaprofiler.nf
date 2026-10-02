@@ -177,11 +177,12 @@ workflow RGAPROFILER {
     }
 
     //
-    // Clean the input FASTA (dedup, strip stop-codon '*', uppercase) before handing
-    // it to any prediction tool — real proteome FASTAs need this (e.g. trailing '*'
-    // breaks Phobius/InterProScan) — and split it into sequence blocks/chunks so
-    // DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM (below) can each fan
-    // out across them instead of ever processing an entire proteome as one task.
+    // Clean the input FASTA (dedup, strip the trailing stop-codon '*', internal '*' -> X,
+    // uppercase) before handing it to any prediction tool — real proteome FASTAs need
+    // this (e.g. trailing '*' breaks Phobius/InterProScan) — and split it into sequence
+    // blocks/chunks so DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM
+    // (below) can each fan out across them instead of ever processing an entire proteome
+    // as one task.
     // --num_blocks (if set) takes priority and requests exactly that many chunks
     // (seqkit split2 --by-part balances sequences across them as evenly as possible);
     // otherwise chunks are sized by --fasta_qc_chunk_size sequences each, same as
@@ -323,12 +324,33 @@ workflow RGAPROFILER {
     def ch_signalp6_predictions = SIGNALP6_MERGE.out.predictions
         .map { meta, files -> [ meta, files.find { it.toString().contains('_predictions.txt') } ] }
 
+    // Chunking and CPU-vs-GPU both nudge some tools' numbers (docs/usage.md#chunking-and-reproducibility),
+    // so RGA_CLASSIFY records them in run_metadata.json -- as requested *and* as resolved
+    // (--num_blocks auto's real chunk count, --use_gpu auto's detected GPU), which
+    // pipeline_info/params_*.json alone doesn't show. A single-chunk sample's chunks
+    // output is a bare path rather than a list.
+    def ch_run_settings = FASTA_QC.out.chunks
+        .map { meta, chunks ->
+            [
+                meta,
+                [
+                    pipeline_version   : workflow.manifest.version,
+                    num_blocks         : params.num_blocks,
+                    fasta_qc_chunk_size: params.num_blocks ? null : params.fasta_qc_chunk_size,
+                    n_chunks           : chunks instanceof List ? chunks.size() : 1,
+                    use_gpu            : params.use_gpu,
+                    gpu_used           : signalp6_use_gpu,
+                ],
+            ]
+        }
+
     def ch_rga_classify_input = INTERPROSCAN_MERGE.out.tsv
         .join(PHOBIUS_MERGE.out.predictions)
         .join(ch_deeptmhmm_gff3)
         .join(ch_signalp6_predictions)
         .join(DEEPLOC2_MERGE.out.predictions)
         .join(DEEPCOIL2_MERGE.out.results_dir)
+        .join(ch_run_settings)
 
     RGA_CLASSIFY(ch_rga_classify_input)
     ch_versions = ch_versions.mix(RGA_CLASSIFY.out.versions)

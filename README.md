@@ -12,10 +12,17 @@
 
 **omatheuspimenta/rgaprofiler** is a bioinformatics pipeline that predicts RGAs (Resistance Gene Analogs) in plant proteomes. Given one or more protein FASTA files, it cleans and deduplicates the input, runs six independent protein-prediction tools in parallel (DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6, DeepTMHMM), and combines their outputs into per-protein RGA family/subclass calls using the classification logic from [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor), plus a self-contained HTML summary report. See [`docs/output.md`](docs/output.md) for the full output structure.
 
-1. Input QC: deduplicate, strip trailing stop codons, split into chunks ([`FASTA_QC`](docs/output.md#fasta_qc))
+1. Input QC: deduplicate, strip trailing stop codons, turn internal ones into `X`, split into chunks ([`FASTA_QC`](docs/output.md#fasta_qc))
 2. Run six prediction tools in parallel: coiled-coil domains ([`DeepCoil2`](docs/output.md#deepcoil2)), signal peptides + TM topology ([`Phobius`](docs/output.md#phobius)), domain/functional annotation ([`InterProScan`](docs/output.md#interproscan)), subcellular localization ([`DeepLoc2`](docs/output.md#deeploc2)), signal peptides ([`SignalP6`](docs/output.md#signalp6)), transmembrane helices ([`DeepTMHMM`](docs/output.md#deeptmhmm))
 3. Classify each protein as an RGA (family/subclass) from the combined evidence ([`RGA_CLASSIFY`](docs/output.md#rga-classification))
 4. Render a self-contained HTML summary report ([`RGA_REPORT`](docs/output.md#summary-report))
+
+> [!NOTE]
+> Removing the trailing stop codon (`*`) is intentional and changes results: otherwise
+> DeepTMHMM, DeepLoc2, SignalP6 and DeepCoil2 score it as an extra unknown residue at the
+> C-terminus. Results from runs on a FASTA that still has its `*` — including the current
+> `rgapredictor` R570 reference results — therefore differ (about 1.5% of the R570 RGA
+> calls, mostly TM-CC). See [`FASTA_QC`](docs/output.md#fasta_qc).
 
 DeepCoil2, DeepLoc2, SignalP6, and DeepTMHMM can run on a GPU (`--use_gpu`); Phobius, InterProScan, and the RGA classification/report steps are CPU-only. Several of the underlying tools (InterProScan's database, DeepTMHMM/SignalP6/DeepLoc2's model weights) are license-gated and must be downloaded separately by the user — see [`docs/software-setup.md`](docs/software-setup.md).
 

@@ -153,10 +153,11 @@ This version number will be logged in reports when you run the pipeline, so that
 
 To further assist in reproducibility, you can use share and reuse [parameter files](#running-the-pipeline) to repeat pipeline runs with the same settings without having to write out a command with every single parameter.
 
-Keep the **chunking** fixed too (`--num_blocks` / `--fasta_qc_chunk_size`, see
-[Chunking and reproducibility](#chunking-and-reproducibility)): which proteins share a
-chunk slightly affects a few tools' numbers. Every run's parameters are saved to
-`<outdir>/pipeline_info/params_<timestamp>.json`.
+Keep the **chunking** (`--num_blocks` / `--fasta_qc_chunk_size`) and the **CPU/GPU mode**
+(`--use_gpu`) fixed too, see [Chunking and reproducibility](#chunking-and-reproducibility):
+both slightly affect a few tools' numbers. Every run's parameters are saved to
+`<outdir>/pipeline_info/params_<timestamp>.json`, and the chunk count and CPU/GPU mode each
+sample actually got are in `<outdir>/rga/<sample>/run_metadata.json` (`pipeline_settings`).
 
 > [!TIP]
 > If you wish to share such profile (such as upload as supplementary material for academic publications), make sure to NOT include cluster specific paths to files, nor institutional specific profiles.
@@ -253,15 +254,40 @@ change their numbers**. Measured on the same 100 proteins in two different chunk
 | DeepCoil2 | per-residue scores change by at most 0.003 on GPU (0.19 on CPU); no residue crossed the 0.5 call threshold |
 | InterProScan | Gene3D domain boundaries/e-values differed for 1 of the 100 proteins |
 
-That is why the pipeline never changes your chunking by itself. To compare runs exactly,
-use the same `--num_blocks` / `--fasta_qc_chunk_size` (every run's parameters are saved in
-`<outdir>/pipeline_info/params_<timestamp>.json`).
+On a whole proteome these small effects add up to visible differences. On sugarcane R570:
+
+- **InterProScan:** the chunking changes Gene3D/FunFam domain boundaries — about 6,000 of
+  375,000 Gene3D hits differ from the `rgapredictor` reference results. Pfam hits are
+  identical.
+- **DeepCoil2:** running on GPU vs CPU, and grouping the proteins into different chunks,
+  shift per-residue scores by up to about 0.02.
+
+That is why the pipeline never changes your chunking by itself.
+
+> [!IMPORTANT]
+> To compare runs — two proteomes, two versions of a proteome, or a rerun — keep
+> **`--num_blocks`** (or `--fasta_qc_chunk_size`) and **`--use_gpu`** the same in all of
+> them. With `--num_blocks auto` the chunk count depends on the machine's CPUs, and with
+> `--use_gpu auto` the CPU/GPU mode depends on whether a GPU is found, so the same command
+> on another machine can give slightly different numbers. To repeat a run exactly, pass the
+> values it actually used, e.g. `--num_blocks 1000 --use_gpu true`.
+
+Each run records both settings in two places:
+
+- `<outdir>/pipeline_info/params_<timestamp>.json`: the values you asked for (e.g.
+  `"num_blocks": "auto"`, `"use_gpu": "auto"`).
+- `<outdir>/rga/<sample>/run_metadata.json`, block `pipeline_settings`: what they resolved
+  to for that sample — `n_chunks` (the real chunk count) and `gpu_used` (`true`/`false`) —
+  next to the requested `num_blocks`, `fasta_qc_chunk_size` and `use_gpu`.
 
 Even with identical settings, two things vary slightly from run to run (in any version of
 the pipeline): the row order of InterProScan's table, and — on GPU — an occasional
 last-digit change in a DeepCoil2 score (e.g. 0.247 vs 0.248), which comes from DeepCoil2's
-GPU arithmetic. Neither changed an RGA call in any comparison we made. Results from a CPU
-run and a GPU run also differ at this floating-point level.
+GPU arithmetic. Neither changed an RGA call in any comparison we made.
+
+Results also differ if the input still had its trailing stop codons (`*`) when it was
+analysed, as in the `rgapredictor` R570 reference results; see
+[FASTA_QC](output.md#fasta_qc).
 
 ## Running on a machine without a GPU
 

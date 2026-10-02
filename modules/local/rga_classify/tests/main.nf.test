@@ -97,6 +97,7 @@ nextflow_process {
                     .join(SIGNALP6.out.predictions.map { meta, files -> [meta, files.find { it.toString().contains('_predictions.txt') }] })
                     .join(DEEPLOC2.out.predictions)
                     .join(DEEPCOIL2.out.results_dir)
+                    .map { row -> row + [[ num_blocks: null, fasta_qc_chunk_size: 5000, n_chunks: 1, use_gpu: 'auto', gpu_used: false ]] }
                 """
             }
         }
@@ -122,6 +123,14 @@ nextflow_process {
             assert fields[rga_col] == 'True'
             assert fields[family_col] == 'NLR'
             assert fields[features_col].contains('NB-ARC')
+
+            // The pipeline-level chunking/GPU settings are folded into run_metadata.json
+            // next to rga_classify's own keys.
+            def metadata_json = results.find { it.toString().endsWith('run_metadata.json') }
+            def metadata = new groovy.json.JsonSlurper().parse(file(metadata_json))
+            assert metadata.pipeline_settings.n_chunks == 1
+            assert metadata.pipeline_settings.gpu_used == false
+            assert metadata.counts != null
 
             assert snapshot(process.out.versions).match()
         }

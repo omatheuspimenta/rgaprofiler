@@ -42,6 +42,7 @@ nextflow_process {
             def linhas_completas = file(out_fasta).readLines()
             assert linhas_completas.contains(">Seq1")
             assert !linhas_completas.contains(">Seq1 duplicada")
+            assert linhas_completas.contains("MKVXLY") // internal stop -> X, not deleted
             assert linhas_completas.contains(">Seq3_invalida")
             assert linhas_completas.contains("MKVXXXLY")
             assert linhas_completas.contains(">Seq4")
@@ -67,6 +68,39 @@ nextflow_process {
             assert chunk2_lines.contains(">Seq4")
             
             assert snapshot(process.out).match()
+        }
+    }
+
+    // Terminal stop codons are stripped, internal ones become X (deleting them would
+    // splice the neighbouring residues into a sequence that doesn't exist). The matching
+    // stderr WARNING lines are checked by tests/bin/test_fasta_qc.sh.
+    test("Strips a terminal stop codon, turns an internal one into X") {
+        when {
+            process {
+                """
+                def stops_fasta = file("\${workDir}/stops.fasta")
+                stops_fasta.text = '''\\
+                >trailing
+                MKV*
+                >internal
+                MK*LV
+                >none
+                MKLV
+                '''.stripIndent()
+
+                input[0] = [
+                    [ id:'teste_stops', single_end:false ],
+                    stops_fasta
+                ]
+                input[1] = 'size'
+                input[2] = 10
+                """
+            }
+        }
+        then {
+            assert process.success
+            def lines = file(process.out.fasta[0][1]).readLines()
+            assert lines == ['>trailing', 'MKV', '>internal', 'MKXLV', '>none', 'MKLV']
         }
     }
 

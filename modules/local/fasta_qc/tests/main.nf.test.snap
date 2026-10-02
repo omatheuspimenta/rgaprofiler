@@ -8,7 +8,7 @@
                             "id": "teste_qc",
                             "single_end": false
                         },
-                        "teste_qc_clean.fasta:md5,0e867e0419156833a4ccb228b36fe88c"
+                        "teste_qc_clean.fasta:md5,f9dba11f6cdca4d21d9cf581c43f05da"
                     ]
                 ],
                 "1": [
@@ -18,7 +18,7 @@
                             "single_end": false
                         },
                         [
-                            "teste_qc_clean.part_001.fasta.fasta:md5,8b60dd48f29e6741fa0ce8e62e67e284",
+                            "teste_qc_clean.part_001.fasta.fasta:md5,99b1a046ced7616135c58c4c3743220d",
                             "teste_qc_clean.part_002.fasta.fasta:md5,e0801dbcea13a8732fcef55fa37f4eb6"
                         ]
                     ]
@@ -33,7 +33,7 @@
                             "single_end": false
                         },
                         [
-                            "teste_qc_clean.part_001.fasta.fasta:md5,8b60dd48f29e6741fa0ce8e62e67e284",
+                            "teste_qc_clean.part_001.fasta.fasta:md5,99b1a046ced7616135c58c4c3743220d",
                             "teste_qc_clean.part_002.fasta.fasta:md5,e0801dbcea13a8732fcef55fa37f4eb6"
                         ]
                     ]
@@ -44,7 +44,7 @@
                             "id": "teste_qc",
                             "single_end": false
                         },
-                        "teste_qc_clean.fasta:md5,0e867e0419156833a4ccb228b36fe88c"
+                        "teste_qc_clean.fasta:md5,f9dba11f6cdca4d21d9cf581c43f05da"
                     ]
                 ],
                 "versions": [

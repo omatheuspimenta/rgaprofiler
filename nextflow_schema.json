@@ -87,7 +87,7 @@
                     "default": 5000,
                     "minimum": 1,
                     "description": "Number of sequences per chunk when FASTA_QC splits the cleaned input FASTA. Ignored when --num_blocks is set.",
-                    "help_text": "FASTA_QC always cleans the input (dedup, strip stop-codon '*', uppercase) and additionally splits the result into chunks, which DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each fan out over (one task per chunk, merged back into one result per sample afterwards). This parameter fixes the number of sequences in each chunk, so the resulting chunk count scales with input size; use --num_blocks instead to fix the chunk count directly.",
+                    "help_text": "FASTA_QC always cleans the input (dedup, strip the trailing stop-codon '*', turn internal '*' into X, uppercase) and additionally splits the result into chunks, which DeepCoil2, Phobius, InterProScan, DeepLoc2, SignalP6 and DeepTMHMM each fan out over (one task per chunk, merged back into one result per sample afterwards). This parameter fixes the number of sequences in each chunk, so the resulting chunk count scales with input size; use --num_blocks instead to fix the chunk count directly.",
                     "fa_icon": "fas fa-layer-group",
                     "hidden": true
                 },

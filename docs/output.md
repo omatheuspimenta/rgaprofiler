@@ -66,16 +66,33 @@ a few tools' numbers very slightly — see
 <summary>Output files</summary>
 
 - `fasta/<sample>/`
-  - `<sample>_clean.fasta`: your input after removing duplicate protein IDs, trailing
-    stop codons (`*`) and stray characters, and uppercasing. This is what every tool
-    actually analyses.
+  - `<sample>_clean.fasta`: your input after removing duplicate protein IDs, the
+    trailing stop codon (`*` at the very end of a sequence), whitespace and carriage
+    returns, then uppercasing. An internal stop codon (a `*` anywhere else, e.g. a
+    pseudogene or a broken gene model) is replaced with `X`, never deleted — deleting it
+    would join the residues on either side into a protein that doesn't exist. Any other
+    character that isn't an amino-acid letter is also replaced with `X`. This is what
+    every tool actually analyses.
   - `<sample>_clean_chunks/<sample>_clean.part_NNN.fasta.fasta`: the same sequences split
     into chunks (whole FASTA records only). How many chunks is set by `--num_blocks` or
     `--fasta_qc_chunk_size` — see [Sequence batching](usage.md#sequence-batching---num_blocks).
 
 </details>
 
-Every sequence that was changed or dropped is listed as a `WARNING` in the FASTA_QC task's log (`.command.err` in its work directory).
+Every sequence that was changed or dropped is listed as a `WARNING` in the FASTA_QC task's
+log (`.command.err` in its work directory): duplicate IDs, internal stop codons
+(`WARNING: N internal stop codon(s) (*) in sequence <id> replaced with X`), other invalid
+characters, and sequences left empty (e.g. one that was only `*`). Removing a trailing
+stop codon is routine and is not logged.
+
+> [!NOTE]
+> **Removing the trailing `*` is intentional, and it changes results.** None of the tools
+> treats `*` as "end of protein": DeepTMHMM and DeepLoc2 read it as an unknown token (ESM-1b
+> `<unk>`), SignalP6 and DeepCoil2 as `X`, so a kept `*` is scored as one extra unknown
+> residue at the C-terminus. Results from runs on a FASTA that still has its `*` — including
+> the current [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor) R570
+> reference results — therefore differ from this pipeline's. On R570 about 1.5% of the RGA
+> calls differ, mostly TM-CC.
 
 ### DeepCoil2
 
@@ -199,6 +216,11 @@ transmembrane topology. Runs on GPU when available.
   - `report.html` / `report.md`: the classifier's own detailed report (methods, rules
     applied, confidence, warnings, top candidates).
   - `run_metadata.json`: exact command, settings and input checksums, for reproducibility.
+    Its `pipeline_settings` block records the chunking and CPU/GPU mode the tools ran
+    with: `num_blocks`, `fasta_qc_chunk_size` and `use_gpu` as requested, plus `n_chunks`
+    (the real chunk count, e.g. what `--num_blocks auto` chose) and `gpu_used`. Both affect
+    some tools' numbers slightly — see
+    [Chunking and reproducibility](usage.md#chunking-and-reproducibility).
   - `accession_audit.tsv`, `unmatched_ids_report.tsv`: how protein IDs were matched across
     the six tools' files — check these if counts look off.
   - `cc_policy_sensitivity.tsv`, `cc_segment_sensitivity.tsv`: how the coiled-coil-based
