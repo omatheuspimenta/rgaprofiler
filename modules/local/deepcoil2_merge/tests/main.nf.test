@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process DEEPCOIL2_MERGE"
     script "../main.nf"
     process "DEEPCOIL2_MERGE"
+    tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
 
     test("Collects two chunks' per-protein .out files into one results/ directory, losing/duplicating nothing") {
         when {

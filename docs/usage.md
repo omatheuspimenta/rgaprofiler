@@ -31,10 +31,10 @@ R570,/absolute/path/to/R570.protein.fasta
 another_sample,/absolute/path/to/another_sample.protein.fasta
 ```
 
-| Column   | Description                                                                                                                             |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Column   | Description                                                                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample` | A name for this proteome. Each tool's results for it go in a folder with this name (e.g. `rga/<sample>/`), and file names start with it. Spaces are automatically converted to underscores. |
-| `fasta`  | Full path to a protein FASTA file for this sample. Must exist and end in `.fa`/`.fasta` (optionally gzipped, e.g. `.fasta.gz`).         |
+| `fasta`  | Full path to a protein FASTA file for this sample. Must exist and end in `.fa`/`.fasta` (optionally gzipped, e.g. `.fasta.gz`).                                                             |
 
 Unlike read-based nf-core pipelines, there's no concept of "multiple runs of the same
 sample" here (no lanes to concatenate) — one row is one FASTA to profile. If you have
@@ -111,11 +111,11 @@ nextflow run omatheuspimenta/rgaprofiler -profile docker,long_running -params-fi
 with:
 
 ```yaml title="params.yaml"
-input: './samplesheet.csv'
-outdir: './results/'
-interproscan_db: '/path/to/interproscan-5.78-109.0'
-num_blocks: 'auto'      # or a number, e.g. 1000
-use_gpu: 'auto'         # 'auto' (default), 'true' or 'false'
+input: "./samplesheet.csv"
+outdir: "./results/"
+interproscan_db: "/path/to/interproscan-5.78-109.0"
+num_blocks: "auto" # or a number, e.g. 1000
+use_gpu: "auto" # 'auto' (default), 'true' or 'false'
 ```
 
 A filled-in copy of this is committed at [`assets/params.example.yml`](../assets/params.example.yml)
@@ -166,14 +166,14 @@ sample actually got are in `<outdir>/rga/<sample>/run_metadata.json` (`pipeline_
 
 The defaults work on any machine; these additions make the most of yours:
 
-| Your situation | What to add |
-|---|---|
-| A computer with an NVIDIA GPU | nothing — the GPU is detected and used automatically (`--use_gpu auto`); just do SignalP6's one-time [GPU step](software-setup.md#signalp-60) during setup |
-| A computer **without** a GPU | nothing is required; see [Running on a machine without a GPU](#running-on-a-machine-without-a-gpu) for what to expect and how to speed it up |
-| A whole proteome (tens of thousands of proteins or more) | `-profile docker,long_running` and `--num_blocks auto` |
-| A small protein set (hundreds to a few thousand proteins) | nothing; `--num_blocks auto` lets it use all your CPUs |
-| Several proteomes at once | one row per proteome in the samplesheet — each gets its own result folders |
-| A cluster (Slurm, SGE, …) | your institution's profile (`-profile docker,<institute>`), an explicit `--num_blocks N`, and [`resourceLimits`](#limiting-what-the-pipeline-may-use) |
+| Your situation                                            | What to add                                                                                                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A computer with an NVIDIA GPU                             | nothing — the GPU is detected and used automatically (`--use_gpu auto`); just do SignalP6's one-time [GPU step](software-setup.md#signalp-60) during setup |
+| A computer **without** a GPU                              | nothing is required; see [Running on a machine without a GPU](#running-on-a-machine-without-a-gpu) for what to expect and how to speed it up               |
+| A whole proteome (tens of thousands of proteins or more)  | `-profile docker,long_running` and `--num_blocks auto`                                                                                                     |
+| A small protein set (hundreds to a few thousand proteins) | nothing; `--num_blocks auto` lets it use all your CPUs                                                                                                     |
+| Several proteomes at once                                 | one row per proteome in the samplesheet — each gets its own result folders                                                                                 |
+| A cluster (Slurm, SGE, …)                                 | your institution's profile (`-profile docker,<institute>`), an explicit `--num_blocks N`, and [`resourceLimits`](#limiting-what-the-pipeline-may-use)      |
 
 ## Sequence batching (`--num_blocks`)
 
@@ -201,7 +201,7 @@ nextflow run . \
     --outdir results
 ```
 
-More chunks means more, smaller tasks that *can* run in parallel; how many actually run
+More chunks means more, smaller tasks that _can_ run in parallel; how many actually run
 at once is decided by your machine (or cluster) and the pipeline's resource settings.
 
 **Checking what happened:** the log prints `Sequence batching:` lines — which setting is in
@@ -213,13 +213,13 @@ saved in `<outdir>/fasta/<sample>/<sample>_clean_chunks/`.
 
 ### Choosing a chunk count
 
-| Situation | Suggestion |
-|---|---|
-| Any run on a single machine | `--num_blocks auto` |
-| Whole proteome, explicit number | about one chunk per 300–500 proteins (e.g. 300,000 proteins → `--num_blocks 1000`) |
-| Small protein set | at least ~100 proteins per chunk — every chunk pays a fixed start-up cost to load the models |
-| GPU with 20 GB or less | at most ~5,000 proteins per chunk (DeepCoil2's GPU memory grows with chunk size) |
-| Cluster | an explicit `--num_blocks`; more chunks = more, shorter jobs |
+| Situation                       | Suggestion                                                                                   |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| Any run on a single machine     | `--num_blocks auto`                                                                          |
+| Whole proteome, explicit number | about one chunk per 300–500 proteins (e.g. 300,000 proteins → `--num_blocks 1000`)           |
+| Small protein set               | at least ~100 proteins per chunk — every chunk pays a fixed start-up cost to load the models |
+| GPU with 20 GB or less          | at most ~5,000 proteins per chunk (DeepCoil2's GPU memory grows with chunk size)             |
+| Cluster                         | an explicit `--num_blocks`; more chunks = more, shorter jobs                                 |
 
 <details markdown="1">
 <summary>Technical details</summary>
@@ -247,12 +247,12 @@ Every protein is predicted exactly once, whatever the chunking. But a few tools 
 proteins in small groups internally, so **which proteins share a chunk can very slightly
 change their numbers**. Measured on the same 100 proteins in two different chunks:
 
-| Tool | Effect of changing the chunking |
-|---|---|
-| Phobius, DeepLoc2, DeepTMHMM | none |
-| SignalP6 | probabilities change by at most 0.000007; no prediction changed |
-| DeepCoil2 | per-residue scores change by at most 0.003 on GPU (0.19 on CPU); no residue crossed the 0.5 call threshold |
-| InterProScan | Gene3D domain boundaries/e-values differed for 1 of the 100 proteins |
+| Tool                         | Effect of changing the chunking                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Phobius, DeepLoc2, DeepTMHMM | none                                                                                                       |
+| SignalP6                     | probabilities change by at most 0.000007; no prediction changed                                            |
+| DeepCoil2                    | per-residue scores change by at most 0.003 on GPU (0.19 on CPU); no residue crossed the 0.5 call threshold |
+| InterProScan                 | Gene3D domain boundaries/e-values differed for 1 of the 100 proteins                                       |
 
 On a whole proteome these small effects add up to visible differences. On sugarcane R570:
 
@@ -376,13 +376,13 @@ long it may run.
 attempt number. Peak memory was measured for every task of a real 1,000-chunk R570 run
 (joined to each chunk's composition) and for single proteins of 1,000–35,000 residues:
 
-| Tool | 300-protein chunk | 4,913-protein chunk | one 35,000-residue protein | Requested (300-protein chunk) |
-|---|---|---|---|---|
-| SignalP6 | 3.1–3.6 GB | 4.3 GB | 3.5 GB (1.9 GB on CPU) | 5 GB |
-| DeepTMHMM | 5.4–5.5 GB (6.5 GB on CPU) | 5.5 GB | 5.4 GB | 9 GB |
-| DeepLoc2 | 9.9–10.3 GB | 10.3 GB | 10.0 GB | 13 GB |
-| DeepCoil2 | 5.7–6.8 GB (4.0 GB on CPU) | 16.0 GB | 5.0 GB | 9 GB |
-| InterProScan | 4.5–7.8 GB | ~13–14 GB (extrapolated) | 6.0 GB | 11 GB |
+| Tool         | 300-protein chunk          | 4,913-protein chunk      | one 35,000-residue protein | Requested (300-protein chunk) |
+| ------------ | -------------------------- | ------------------------ | -------------------------- | ----------------------------- |
+| SignalP6     | 3.1–3.6 GB                 | 4.3 GB                   | 3.5 GB (1.9 GB on CPU)     | 5 GB                          |
+| DeepTMHMM    | 5.4–5.5 GB (6.5 GB on CPU) | 5.5 GB                   | 5.4 GB                     | 9 GB                          |
+| DeepLoc2     | 9.9–10.3 GB                | 10.3 GB                  | 10.0 GB                    | 13 GB                         |
+| DeepCoil2    | 5.7–6.8 GB (4.0 GB on CPU) | 16.0 GB                  | 5.0 GB                     | 9 GB                          |
+| InterProScan | 4.5–7.8 GB                 | ~13–14 GB (extrapolated) | 6.0 GB                     | 11 GB                         |
 
 Memory is set mostly by the model, not by protein length (these tools truncate or window
 long proteins); only DeepCoil2 and InterProScan grow with the amount in the chunk.
@@ -579,7 +579,7 @@ passing `-c`/`ext.args` at all.
 
 ### Different pipeline-level parameters
 
-The above is about the RGA *classification* ruleset. For tuning the wrapper pipeline
+The above is about the RGA _classification_ ruleset. For tuning the wrapper pipeline
 itself instead — chunking (`--num_blocks`/`--fasta_qc_chunk_size`), GPU usage
 (`--use_gpu`), or where license-gated software lives (`--softwares_dir`) — see
 [Sequence batching](#sequence-batching---num_blocks) above and the full parameter

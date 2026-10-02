@@ -2,6 +2,7 @@ nextflow_process {
     name "Test Process DEEPCOIL2"
     script "../main.nf"
     process "DEEPCOIL2"
+    tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
 
     test("Run deepcoil2 - R570 subsample (see tests/testdata/README.md)") {
         when {

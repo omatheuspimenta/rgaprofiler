@@ -17,6 +17,12 @@ lint:
     - manifest.name
     - manifest.homePage
   multiqc_config: false
+  # tests/resources.nf.test is a resource-sizing probe (tests/probe/), not a pipeline run:
+  # it has no outdir and no versions.yml to snapshot. Test data is bundled under
+  # tests/testdata/, so tests/nextflow.config has no pipelines_testdata_base_path.
+  nf_test_content:
+    - tests/resources.nf.test
+    - tests/nextflow.config
   files_exist:
     - assets/multiqc_config.yml
     - conf/igenomes.config

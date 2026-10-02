@@ -4,6 +4,7 @@ nextflow_process {
     process "INTERPROSCAN"
 
     test("Should run InterProScan using Mock files") {
+        tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
         when {
             process {
                 """
@@ -14,7 +15,7 @@ nextflow_process {
                 //Create a "Fake" folder of InterProScan
                 def mock_ipr_dir = file("\${workDir}/fake_interproscan_5.78")
                 mock_ipr_dir.mkdirs()
-                
+
                 def mock_sh = file("\${mock_ipr_dir}/interproscan.sh")
                 mock_sh.text = '''#!/bin/bash
                 if [[ "\$1" == "--version" ]]; then
@@ -24,7 +25,7 @@ nextflow_process {
                 # Simulate the expected output
                 echo -e "Seq1\\t...fake_interpro_results..." > teste_ipr_interpro.tsv
                 '''.stripIndent()
-                
+
                 // mock permission
                 mock_sh.setPermissions('rwxr-xr-x')
 

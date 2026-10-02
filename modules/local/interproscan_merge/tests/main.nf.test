@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process INTERPROSCAN_MERGE"
     script "../main.nf"
     process "INTERPROSCAN_MERGE"
+    tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
 
     test("Merges two per-chunk TSVs (no header row, so plain concatenation) into one") {
         when {

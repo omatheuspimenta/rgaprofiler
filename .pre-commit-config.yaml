@@ -5,6 +5,9 @@ repos:
       - id: prettier
         additional_dependencies:
           - prettier@3.9.6
+        # docker/: container build contexts, mostly vendored upstream tool code baked into
+        # versioned images -- kept byte-identical to what was built, never reformatted.
+        exclude: ^docker/
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -15,6 +18,7 @@ repos:
               .*ro-crate-metadata.json$|
               modules/(?!local/).*|
               subworkflows/(?!local/).*|
+              docker/.*|
               .*\.snap$
           )$
       - id: end-of-file-fixer
@@ -23,6 +27,7 @@ repos:
               .*ro-crate-metadata.json$|
               modules/(?!local/).*|
               subworkflows/(?!local/).*|
+              docker/.*|
               .*\.snap$
           )$
       - id: check-added-large-files

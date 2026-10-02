@@ -16,7 +16,10 @@ tools:
       homepage: https://interproscan-docs.readthedocs.io/
       documentation: https://interproscan-docs.readthedocs.io/
       doi: 10.1093/bioinformatics/btu031
-      licence: ["Apache-2.0 (InterProScan itself); member databases and optional licensed sub-analyses carry their own separate licences"]
+      licence:
+        [
+          "Apache-2.0 (InterProScan itself); member databases and optional licensed sub-analyses carry their own separate licences",
+        ]
       identifier: ""
 input:
   - - meta:

@@ -4,6 +4,7 @@ nextflow_pipeline {
     script "./probe/main.nf"
     config "./probe/nextflow.config"
     tag "resources"
+    tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
 
     // Runs the REAL conf/base.config's process_medium_chunk / process_high_chunk labels
     // (through tests/probe/, no containers or GPU needed) under the small-CI-machine

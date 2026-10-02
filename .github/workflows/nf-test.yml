@@ -19,6 +19,11 @@ concurrency:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NFT_VER: "0.9.4"
+  # Only tests that run without the license-gated software (InterProScan's database and
+  # the DeepLoc2/SignalP6/DeepTMHMM weights, under the git-ignored softwares/) can run on a
+  # CI runner. They carry this tag; the rest -- including the full pipeline test -- need a
+  # local `nf-test test --profile +docker` on a machine set up per docs/software-setup.md.
+  NFT_TAGS: "no_licensed_software"
   NFT_WORKDIR: "~"
   NXF_ANSI_LOG: false
   NXF_SINGULARITY_CACHEDIR: ${{ github.workspace }}/.singularity
@@ -50,6 +55,7 @@ jobs:
           NFT_VER: ${{ env.NFT_VER }}
         with:
           max_shards: 7
+          tags: ${{ env.NFT_TAGS }}
 
       - name: debug
         run: |
@@ -66,15 +72,10 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJson(needs.nf-test-changes.outputs.shard) }}
-        profile: [conda, docker, singularity]
-        isMain:
-          - ${{ github.base_ref == 'master' || github.base_ref == 'main' }}
-        # Exclude conda and singularity on dev
-        exclude:
-          - isMain: false
-            profile: "conda"
-          - isMain: false
-            profile: "singularity"
+        # docker only: it is the one container profile this pipeline supports -- every
+        # module but FASTA_QC ships only a docker image, so conda cannot run them (see
+        # docs/usage.md, -profile).
+        profile: [docker]
         NXF_VER:
           - "25.10.4"
           - "latest-everything"
@@ -98,6 +99,7 @@ jobs:
           profile: ${{ matrix.profile }}
           shard: ${{ matrix.shard }}
           total_shards: ${{ env.TOTAL_SHARDS }}
+          tags: ${{ env.NFT_TAGS }}
 
       - name: Report test status
         if: ${{ always() }}

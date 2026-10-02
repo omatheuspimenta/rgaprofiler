@@ -14,9 +14,9 @@
 # (see the run command above).
 
 # --- Required ---
-input: './samplesheet.csv'
-outdir: './results'
-interproscan_db: '/path/to/interproscan-5.78-109.0'
+input: "./samplesheet.csv"
+outdir: "./results"
+interproscan_db: "/path/to/interproscan-5.78-109.0"
 
 # --- Commonly set for a real, full-scale proteome run ---
 # Fixed chunk count for FASTA_QC's splitting step -- DeepCoil2, Phobius,
@@ -28,7 +28,7 @@ interproscan_db: '/path/to/interproscan-5.78-109.0'
 num_blocks: 1000
 
 # 'auto' (default) probes for a usable NVIDIA GPU; set true/false to force it.
-use_gpu: 'auto'
+use_gpu: "auto"
 
 # CPU runs only: cap DeepTMHMM's torch threads (default: one per host core).
 # Much faster on big machines; changes its saved embeddings at float level

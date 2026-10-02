@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process SIGNALP6_MERGE"
     script "../main.nf"
     process "SIGNALP6_MERGE"
+    tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
 
     test("Merges two chunks' SignalP6 results into one result per sample, keeping one header and every data row") {
         when {

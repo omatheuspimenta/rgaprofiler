@@ -75,9 +75,20 @@ For more information about linting tests, see [nf-core/tools API documentation](
 #### Pipeline tests
 
 Each nf-core pipeline should be set up with a minimal set of test data.
-GitHub Actions runs the pipeline on this data to ensure it runs through and exits successfully.
 If there are any failures then the automated tests fail.
 These tests are run with the latest available version of Nextflow and the minimum required version specified in the pipeline code.
+
+GitHub Actions can only run the tests that don't need the license-gated software
+(InterProScan's database and the DeepLoc2/SignalP6/DeepTMHMM weights under `softwares/`,
+which can't be distributed): those tests carry `tag "no_licensed_software"`, and CI runs
+only that tag. Give a new test that tag when it runs without `softwares/` (e.g. a merge
+module fed small hand-written fixtures). Every other test, including the full pipeline
+test, runs only locally, so run them yourself before opening a PR:
+
+```bash
+nf-test test --profile +docker                           # everything (needs softwares/)
+nf-test test --profile +docker --tag no_licensed_software # just what CI runs
+```
 
 ### Patch release
 

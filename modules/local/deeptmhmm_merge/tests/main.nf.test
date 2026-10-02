@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process DEEPTMHMM_MERGE"
     script "../main.nf"
     process "DEEPTMHMM_MERGE"
+    tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
 
     test("Merges two chunks' DeepTMHMM results into one result per sample, keeping one GFF3 header and every protein block") {
         when {

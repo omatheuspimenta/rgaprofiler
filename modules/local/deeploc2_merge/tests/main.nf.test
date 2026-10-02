@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process DEEPLOC2_MERGE"
     script "../main.nf"
     process "DEEPLOC2_MERGE"
+    tag "no_licensed_software" // runs in CI: no softwares/ needed (see .github/workflows/nf-test.yml)
 
     test("Merges two chunks' DeepLoc2 CSVs into one CSV per sample, keeping one header and every data row") {
         when {

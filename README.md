@@ -74,12 +74,12 @@ This pipeline's tools ship as ready-to-use public Docker images on GHCR — Dock
 
 A few of the tools this pipeline runs need model weights or databases that cannot legally be bundled into the Docker images, so you download them yourself, once, into a `softwares/` folder that stays local to your machine (git-ignored, never uploaded anywhere):
 
-| Tool | What | Required even for the test data? |
-| --- | --- | --- |
-| InterProScan | Its full release + member-database data (tens of GB) | Yes |
-| DeepTMHMM | 5 model checkpoints + 3 ESM1b weight files (academic license) | Yes |
-| SignalP 6.0 | Model weights for one run mode (academic license) | Yes |
-| DeepLoc 2 | Classifier checkpoints + ESM1b base encoder (academic license) | Yes |
+| Tool         | What                                                           | Required even for the test data? |
+| ------------ | -------------------------------------------------------------- | -------------------------------- |
+| InterProScan | Its full release + member-database data (tens of GB)           | Yes                              |
+| DeepTMHMM    | 5 model checkpoints + 3 ESM1b weight files (academic license)  | Yes                              |
+| SignalP 6.0  | Model weights for one run mode (academic license)              | Yes                              |
+| DeepLoc 2    | Classifier checkpoints + ESM1b base encoder (academic license) | Yes                              |
 
 Go to [`docs/software-setup.md`](docs/software-setup.md) now and work through all four "Per-tool setup" sections there — it tells you exactly where to go, what to download, and what command to run to unpack/place each one. Come back here once every tool's files are in place.
 
