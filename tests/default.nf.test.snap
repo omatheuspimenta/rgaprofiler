@@ -30,7 +30,7 @@
                     "signalp6": "6.0h"
                 },
                 "Workflow": {
-                    "omatheuspimenta/rgaprofiler": "v1.0.0dev"
+                    "omatheuspimenta/rgaprofiler": "v0.2.1dev"
                 }
             },
             [
@@ -103,7 +103,7 @@
                 "r570_subsample_phobius.tsv:md5,24a82656589aaf4398282db15a33617c"
             ]
         ],
-        "timestamp": "2026-09-28T10:11:18.081107788",
+        "timestamp": "2026-10-02T11:40:53.099165836",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

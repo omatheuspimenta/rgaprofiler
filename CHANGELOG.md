@@ -3,7 +3,22 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v1.0.0dev - [unreleased<!-- TODO nf-core: replace with date on release -->]
+## v0.2.1dev - [unreleased]
+
+### `Changed`
+
+- **CI runs only the tests that don't need the license-gated software.** InterProScan's database and the DeepLoc2/SignalP6/DeepTMHMM weights live under the git-ignored `softwares/` and can't be distributed, so every test using them failed on GitHub's runners (8 of 22 on the `v0.1.0` release, failing 6 of the 7 shards on the pinned Nextflow version). The 14 tests that run without them (FASTA_QC, the six `*_MERGE` modules, DeepCoil2, Phobius, InterProScan's mock-database test and the resource-sizing probe) are now tagged `no_licensed_software`, and `nf-test.yml` runs only that tag. The other 8, including the full pipeline test, still run locally with `nf-test test --profile +docker` (see `docs/CONTRIBUTING.md`). Checked locally in a clean clone without `softwares/`: 14/14 pass on every shard with Nextflow 25.10.4 and 26.04.6.
+- **CI tests `-profile docker` only.** On pull requests into `main` the nf-test matrix also ran `conda` and `singularity`, which can't work here: every module except FASTA_QC ships only a docker image, and `docker` is the one profile the pipeline supports (`docs/usage.md`).
+- Formatting only, no content changes: prettier (table alignment, YAML quote style), trailing whitespace and missing final newlines in the pipeline's own files.
+
+### `Fixed`
+
+- **`nf-core linting` failed.**
+  - The pre-commit job (`prek`) reformatted vendored upstream tool code under `docker/`. That code is baked into versioned images, so `docker/` is now excluded from the prettier, trailing-whitespace and end-of-file hooks (the large-file and merge-conflict checks still cover it).
+  - `nf-core pipelines lint` failed its `nf_test_content` check on `tests/resources.nf.test`, a resource-sizing probe with no `outdir` or `versions.yml`, and on `tests/nextflow.config`, which has no `pipelines_testdata_base_path` because the test data is bundled under `tests/testdata/`. Both are now listed as exceptions in `.nf-core.yml`.
+- **The pipeline version now matches its release tags.** The `v0.1.0` release still declared `1.0.0dev` in `nextflow.config` (`manifest.version`), `.nf-core.yml` and `ro-crate-metadata.json`, so its runs reported themselves as `1.0.0dev`, including in `pipeline_info/` and the `pipeline_version` field of `run_metadata.json`. All three now say `0.2.1dev`.
+
+## v0.1.0 - [2026-10-02]
 
 Initial release of omatheuspimenta/rgaprofiler, created with the [nf-core](https://nf-co.re/) template.
 
