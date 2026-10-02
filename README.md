@@ -20,9 +20,7 @@
 > [!NOTE]
 > Removing the trailing stop codon (`*`) is intentional and changes results: otherwise
 > DeepTMHMM, DeepLoc2, SignalP6 and DeepCoil2 score it as an extra unknown residue at the
-> C-terminus. Results from runs on a FASTA that still has its `*` — including the current
-> `rgapredictor` R570 reference results — therefore differ (about 1.5% of the R570 RGA
-> calls, mostly TM-CC). See [`FASTA_QC`](docs/output.md#fasta_qc).
+> C-terminus. See [`FASTA_QC`](docs/output.md#fasta_qc).
 
 DeepCoil2, DeepLoc2, SignalP6, and DeepTMHMM can run on a GPU (`--use_gpu`); Phobius, InterProScan, and the RGA classification/report steps are CPU-only. Several of the underlying tools (InterProScan's database, DeepTMHMM/SignalP6/DeepLoc2's model weights) are license-gated and must be downloaded separately by the user — see [`docs/software-setup.md`](docs/software-setup.md).
 

@@ -89,10 +89,7 @@ stop codon is routine and is not logged.
 > **Removing the trailing `*` is intentional, and it changes results.** None of the tools
 > treats `*` as "end of protein": DeepTMHMM and DeepLoc2 read it as an unknown token (ESM-1b
 > `<unk>`), SignalP6 and DeepCoil2 as `X`, so a kept `*` is scored as one extra unknown
-> residue at the C-terminus. Results from runs on a FASTA that still has its `*` — including
-> the current [`rgapredictor`](https://github.com/omatheuspimenta/rgapredictor) R570
-> reference results — therefore differ from this pipeline's. On R570 about 1.5% of the RGA
-> calls differ, mostly TM-CC.
+> residue at the C-terminus.
 
 ### DeepCoil2
 
